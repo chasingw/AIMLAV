@@ -181,7 +181,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Export a scene in Wavefront point cloud format.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--scene', default='scene-0061', type=str, help='Name of a scene, e.g. scene-0061')
-    parser.add_argument('--out_dir', default='~/nuscenes-visualization/pointclouds', type=str, help='Output folder')
+    parser.add_argument('--out_dir', default='data/exports/nuscenes-visualization/pointclouds', type=str, help='Output folder')
     parser.add_argument('--verbose', default=0, type=int, help='Whether to print outputs to stdout')
 
     args = parser.parse_args()

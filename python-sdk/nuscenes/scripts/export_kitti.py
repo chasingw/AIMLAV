@@ -56,7 +56,7 @@ from nuscenes.eval.detection.utils import category_to_detection_name
 
 class KittiConverter:
     def __init__(self,
-                 nusc_kitti_dir: str = '~/nusc_kitti',
+                 nusc_kitti_dir: str = 'data/exports/nusc_kitti',
                  cam_name: str = 'CAM_FRONT',
                  lidar_name: str = 'LIDAR_TOP',
                  image_count: int = 10,

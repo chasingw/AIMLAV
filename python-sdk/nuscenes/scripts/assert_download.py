@@ -32,7 +32,7 @@ if __name__ == "__main__":
     # Settings.
     parser = argparse.ArgumentParser(description='Test that the installed dataset is complete.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--dataroot', type=str, default='/data/sets/nuscenes',
+    parser.add_argument('--dataroot', type=str, default='data/sets/nuscenes',
                         help='Default nuScenes data directory.')
     parser.add_argument('--version', type=str, default='v1.0-trainval',
                         help='Which version of the nuScenes dataset to evaluate on, e.g. v1.0-trainval.')
