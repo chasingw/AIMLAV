@@ -1,0 +1,283 @@
+model: {
+  second: {
+    network_class_name: "VoxelNet"
+    voxel_generator {
+      point_cloud_range : [0, -40, -3, 70.4, 40, 1]
+      # point_cloud_range : [0, -32.0, -3, 52.8, 32.0, 1]
+      voxel_size : [0.05, 0.05, 0.1]
+      max_number_of_points_per_voxel : 5
+    }
+
+    voxel_feature_extractor: {
+      module_class_name: "SimpleVoxel"
+      num_filters: [16]
+      with_distance: false
+      num_input_features: 4
+    }
+    middle_feature_extractor: {
+      module_class_name: "SpMiddleFHD"
+      # num_filters_down1: [] # protobuf don't support empty list.
+      # num_filters_down2: []
+      downsample_factor: 8
+      num_input_features: 4
+    }
+    rpn: {
+      module_class_name: "RPNV2"
+      layer_nums: [5]
+      layer_strides: [1]
+      num_filters: [128]
+      upsample_strides: [1]
+      num_upsample_filters: [128]
+      use_groupnorm: false
+      num_groups: 32
+      num_input_features: 128
+    }
+    loss: {
+      classification_loss: {
+        weighted_sigmoid_focal: {
+          alpha: 0.25
+          gamma: 2.0
+          anchorwise_output: true
+        }
+      }
+      localization_loss: {
+        weighted_smooth_l1: {
+          sigma: 3.0
+          code_weight: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        }
+      }
+      classification_weight: 1.0
+      localization_weight: 2.0
+    }
+    num_point_features: 4 # model's num point feature should be independent of dataset
+    # Outputs
+    use_sigmoid_score: true
+    encode_background_as_zeros: true
+    encode_rad_error_by_sin: true
+    sin_error_factor: 1.0
+
+    use_direction_classifier: true # this can help for orientation benchmark
+    direction_loss_weight: 0.2 # enough.
+    num_direction_bins: 2
+    direction_limit_offset: 1
+
+    # Loss
+    pos_class_weight: 1.0
+    neg_class_weight: 1.0
+
+    loss_norm_type: NormByNumPositives
+    # Postprocess
+    post_center_limit_range: [0, -40, -2.2, 70.4, 40, 0.8]
+    nms_class_agnostic: false # only valid in multi-class nms
+
+    box_coder: {
+      ground_box3d_coder: {
+        linear_dim: false
+        encode_angle_vector: false
+      }
+    }
+    target_assigner: {
+      class_settings: {
+        anchor_generator_range: {
+          sizes: [1.6, 3.9, 1.56] # wlh
+          anchor_ranges: [0, -40.0, -1.00, 70.4, 40.0, -1.00] # carefully set z center
+          rotations: [0, 1.57] # DON'T modify this unless you are very familiar with my code.
+        }
+        matched_threshold : 0.6
+        unmatched_threshold : 0.45
+        class_name: "car"
+        use_rotate_nms: true
+        use_multi_class_nms: false
+        nms_pre_max_size: 1000
+        nms_post_max_size: 100
+        nms_score_threshold: 0.3 # 0.4 in submit, but 0.3 can get better hard performance
+        nms_iou_threshold: 0.01
+
+        region_similarity_calculator: {
+          nearest_iou_similarity: {
+          }
+        }
+      }
+      # anchor_generators: {
+      #   anchor_generator_stride: {
+      #     sizes: [1.6, 3.9, 1.56] # wlh
+      #     strides: [0.4, 0.4, 0.0] # if generate only 1 z_center, z_stride will be ignored
+      #     offsets: [0.2, -39.8, -1.00] # origin_offset + strides / 2
+      #     rotations: [0, 1.57] # DON'T modify this unless you are very familiar with my code.
+      #     matched_threshold : 0.6
+      #     unmatched_threshold : 0.45
+      #   }
+      # }
+      sample_positive_fraction : -1
+      sample_size : 512
+      assign_per_class: true
+    }
+  }
+}
+
+train_input_reader: {
+  dataset: {
+    dataset_class_name: "NuScenesDatasetD8"
+    kitti_info_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes/infos_val.pkl"
+    kitti_root_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes"
+  }
+
+  batch_size: 8
+  preprocess: {
+    max_number_of_voxels: 17000
+    shuffle_points: true
+    num_workers: 3
+    groundtruth_localization_noise_std: [1.0, 1.0, 0.5]
+    # groundtruth_rotation_uniform_noise: [-0.3141592654, 0.3141592654]
+    # groundtruth_rotation_uniform_noise: [-1.57, 1.57]
+    groundtruth_rotation_uniform_noise: [-0.78539816, 0.78539816]
+    global_rotation_uniform_noise: [-0.78539816, 0.78539816]
+    global_scaling_uniform_noise: [0.95, 1.05]
+    global_random_rotation_range_per_object: [0, 0] # pi/4 ~ 3pi/4
+    global_translate_noise_std: [0, 0, 0]
+    anchor_area_threshold: -1
+    remove_points_after_sample: true
+    groundtruth_points_drop_percentage: 0.0
+    groundtruth_drop_max_keep_points: 15
+    remove_unknown_examples: false
+    sample_importance: 1.0
+    random_flip_x: false
+    random_flip_y: true
+    remove_environment: false
+    database_sampler {
+      database_info_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes/kitti_dbinfos_train.pkl"
+      sample_groups {
+        name_to_max_num {
+          key: "car"
+          value: 15
+        }
+      }
+      database_prep_steps {
+        filter_by_min_num_points {
+          min_num_point_pairs {
+            key: "car"
+            value: 5
+          }
+        }
+      }
+      database_prep_steps {
+        filter_by_difficulty {
+          removed_difficulties: [-1]
+        }
+      }
+      global_random_rotation_range_per_object: [0, 0]
+      rate: 1.0
+    }
+  }
+}
+
+train_config: {
+  optimizer: {
+    adam_optimizer: {
+      learning_rate: {
+        one_cycle: {
+          lr_max: 2.25e-3
+          moms: [0.95, 0.85]
+          div_factor: 10.0
+          pct_start: 0.4
+        }
+      }
+      weight_decay: 0.01
+    }
+    fixed_weight_decay: true
+    use_moving_average: false
+  }
+  # steps: 99040 # 1238 * 120
+  # steps: 49520 # 619 * 80
+  # steps: 30950 # 619 * 80
+  # steps_per_eval: 3095 # 619 * 5
+  steps: 23200 # 464 * 50
+  steps_per_eval: 2320 # 619 * 5
+
+  save_checkpoints_secs : 1800 # half hour
+  save_summary_steps : 10
+  enable_mixed_precision: false 
+  loss_scale_factor: -1
+  clear_metrics_every_epoch: true
+}
+
+eval_input_reader: {
+  dataset: {
+    dataset_class_name: "NuScenesDataset"
+    kitti_info_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes/infos_train.pkl"
+    # kitti_info_path: "/media/yy/960evo/datasets/kitti/kitti_infos_test.pkl"
+    kitti_root_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes"
+  }
+  batch_size: 8
+  preprocess: {
+    max_number_of_voxels: 40000
+    shuffle_points: false
+    num_workers: 3
+    anchor_area_threshold: -1
+    remove_environment: false
+  }
+}
+
+runtime.step=50, runtime.steptime=15.82, runtime.voxel_gene_time=0.006045, runtime.prep_time=2.399, loss.cls_loss=16.93, loss.cls_loss_rt=15.67, loss.loc_loss=2.001, loss.loc_loss_rt=1.768, loss.loc_elem=[0.03442, 0.02622, 0.3622, 0.03767, 0.0342, 0.03719, 0.3522], loss.cls_pos_rt=0.2563, loss.cls_neg_rt=15.42, loss.dir_rt=0.7048, rpn_acc=0.9988, pr.prec@10=0.001177, pr.rec@10=0.9991, pr.prec@30=0.0002287, pr.rec@30=0.003626, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=126463, misc.num_pos=111, misc.num_neg=70042, misc.num_anchors=70400, misc.lr=0.0002251, misc.mem_usage=87.0
+runtime.step=100, runtime.steptime=15.34, runtime.voxel_gene_time=0.006316, runtime.prep_time=2.539, loss.cls_loss=4.795, loss.cls_loss_rt=2.67, loss.loc_loss=1.855, loss.loc_loss_rt=1.727, loss.loc_elem=[0.02881, 0.02172, 0.3844, 0.03391, 0.03839, 0.04149, 0.3146], loss.cls_pos_rt=0.3686, loss.cls_neg_rt=2.301, loss.dir_rt=0.6998, rpn_acc=0.9988, pr.prec@10=0.001148, pr.rec@10=0.9779, pr.prec@30=0.006098, pr.rec@30=0.0001554, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=36, misc.num_neg=70280, misc.num_anchors=70400, misc.lr=0.0002256, misc.mem_usage=86.9
+runtime.step=150, runtime.steptime=15.32, runtime.voxel_gene_time=0.005939, runtime.prep_time=2.407, loss.cls_loss=1.625, loss.cls_loss_rt=1.638, loss.loc_loss=1.486, loss.loc_loss_rt=1.456, loss.loc_elem=[0.02305, 0.02885, 0.2482, 0.02564, 0.03358, 0.03025, 0.3385], loss.cls_pos_rt=0.5166, loss.cls_neg_rt=1.121, loss.dir_rt=0.6714, rpn_acc=0.9989, pr.prec@10=0.0002537, pr.rec@10=0.09603, pr.prec@30=0.0, pr.rec@30=0.0, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=75, misc.num_neg=70210, misc.num_anchors=70400, misc.lr=0.0002263, misc.mem_usage=86.9
+runtime.step=200, runtime.steptime=15.37, runtime.voxel_gene_time=0.006002, runtime.prep_time=2.398, loss.cls_loss=1.018, loss.cls_loss_rt=0.7681, loss.loc_loss=1.488, loss.loc_loss_rt=1.638, loss.loc_elem=[0.02615, 0.02258, 0.3653, 0.02808, 0.03329, 0.02928, 0.3144], loss.cls_pos_rt=0.5328, loss.cls_neg_rt=0.2353, loss.dir_rt=0.6754, rpn_acc=0.9988, pr.prec@10=0.004346, pr.rec@10=0.03074, pr.prec@30=0.3333, pr.rec@30=0.0001537, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=118, misc.num_neg=70063, misc.num_anchors=70400, misc.lr=0.0002273, misc.mem_usage=86.8
+runtime.step=250, runtime.steptime=15.31, runtime.voxel_gene_time=0.00629, runtime.prep_time=2.479, loss.cls_loss=0.8136, loss.cls_loss_rt=0.7, loss.loc_loss=1.348, loss.loc_loss_rt=1.402, loss.loc_elem=[0.025, 0.02702, 0.2763, 0.03697, 0.04755, 0.06195, 0.226], loss.cls_pos_rt=0.5207, loss.cls_neg_rt=0.1793, loss.dir_rt=0.6929, rpn_acc=0.9989, pr.prec@10=0.01374, pr.rec@10=0.2038, pr.prec@30=0.0, pr.rec@30=0.0, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=32, misc.num_neg=70323, misc.num_anchors=70400, misc.lr=0.0002286, misc.mem_usage=87.1
+runtime.step=300, runtime.steptime=15.37, runtime.voxel_gene_time=0.006978, runtime.prep_time=2.559, loss.cls_loss=0.747, loss.cls_loss_rt=0.8997, loss.loc_loss=1.196, loss.loc_loss_rt=1.399, loss.loc_elem=[0.02221, 0.0315, 0.2773, 0.03217, 0.0351, 0.05092, 0.2504], loss.cls_pos_rt=0.6159, loss.cls_neg_rt=0.2838, loss.dir_rt=0.7476, rpn_acc=0.9988, pr.prec@10=0.02374, pr.rec@10=0.246, pr.prec@30=0.0, pr.rec@30=0.0, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=115, misc.num_neg=70090, misc.num_anchors=70400, misc.lr=0.0002302, misc.mem_usage=86.8
+runtime.step=350, runtime.steptime=15.18, runtime.voxel_gene_time=0.006392, runtime.prep_time=2.612, loss.cls_loss=0.6889, loss.cls_loss_rt=0.5938, loss.loc_loss=1.115, loss.loc_loss_rt=1.078, loss.loc_elem=[0.02059, 0.02115, 0.1917, 0.02565, 0.02526, 0.04218, 0.2126], loss.cls_pos_rt=0.5245, loss.cls_neg_rt=0.06929, loss.dir_rt=0.6717, rpn_acc=0.9989, pr.prec@10=0.02162, pr.rec@10=0.393, pr.prec@30=0.0, pr.rec@30=0.0, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=134, misc.num_neg=69988, misc.num_anchors=70400, misc.lr=0.0002321, misc.mem_usage=86.8
+runtime.step=400, runtime.steptime=15.11, runtime.voxel_gene_time=0.006535, runtime.prep_time=2.437, loss.cls_loss=0.6385, loss.cls_loss_rt=0.6587, loss.loc_loss=1.003, loss.loc_loss_rt=1.013, loss.loc_elem=[0.01848, 0.01969, 0.1841, 0.02973, 0.0256, 0.04366, 0.1855], loss.cls_pos_rt=0.4878, loss.cls_neg_rt=0.1709, loss.dir_rt=0.6795, rpn_acc=0.9989, pr.prec@10=0.03026, pr.rec@10=0.4202, pr.prec@30=0.0, pr.rec@30=0.0, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=137, misc.num_neg=70022, misc.num_anchors=70400, misc.lr=0.0002342, misc.mem_usage=86.7
+runtime.step=450, runtime.steptime=15.19, runtime.voxel_gene_time=0.006118, runtime.prep_time=2.447, loss.cls_loss=0.6032, loss.cls_loss_rt=0.5593, loss.loc_loss=1.038, loss.loc_loss_rt=0.7978, loss.loc_elem=[0.01512, 0.02054, 0.1397, 0.02172, 0.02543, 0.0326, 0.1438], loss.cls_pos_rt=0.4672, loss.cls_neg_rt=0.09213, loss.dir_rt=0.6734, rpn_acc=0.9988, pr.prec@10=0.02717, pr.rec@10=0.502, pr.prec@30=1.0, pr.rec@30=0.0001525, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=56, misc.num_neg=70211, misc.num_anchors=70400, misc.lr=0.0002367, misc.mem_usage=86.7
+runtime.step=500, runtime.steptime=15.2, runtime.voxel_gene_time=0.005916, runtime.prep_time=2.481, loss.cls_loss=0.5978, loss.cls_loss_rt=0.6204, loss.loc_loss=0.9483, loss.loc_loss_rt=1.003, loss.loc_elem=[0.01367, 0.02348, 0.1691, 0.02883, 0.03175, 0.05583, 0.1789], loss.cls_pos_rt=0.523, loss.cls_neg_rt=0.09744, loss.dir_rt=0.6922, rpn_acc=0.9989, pr.prec@10=0.02943, pr.rec@10=0.5068, pr.prec@30=0.0, pr.rec@30=0.0, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=54, misc.num_neg=70248, misc.num_anchors=70400, misc.lr=0.0002394, misc.mem_usage=87.1
+runtime.step=550, runtime.steptime=15.46, runtime.voxel_gene_time=0.006549, runtime.prep_time=2.474, loss.cls_loss=0.587, loss.cls_loss_rt=0.5302, loss.loc_loss=0.9273, loss.loc_loss_rt=0.881, loss.loc_elem=[0.0168, 0.02056, 0.1537, 0.02395, 0.02594, 0.03296, 0.1666], loss.cls_pos_rt=0.4516, loss.cls_neg_rt=0.07856, loss.dir_rt=0.6741, rpn_acc=0.9988, pr.prec@10=0.03521, pr.rec@10=0.5333, pr.prec@30=0.8636, pr.rec@30=0.002884, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=132, misc.num_neg=70017, misc.num_anchors=70400, misc.lr=0.0002424, misc.mem_usage=86.8
+runtime.step=600, runtime.steptime=15.13, runtime.voxel_gene_time=0.007273, runtime.prep_time=2.55, loss.cls_loss=0.5532, loss.cls_loss_rt=0.6445, loss.loc_loss=0.9093, loss.loc_loss_rt=1.023, loss.loc_elem=[0.0165, 0.02106, 0.192, 0.0371, 0.03671, 0.04556, 0.1624], loss.cls_pos_rt=0.4348, loss.cls_neg_rt=0.2097, loss.dir_rt=0.6475, rpn_acc=0.9989, pr.prec@10=0.02771, pr.rec@10=0.6334, pr.prec@30=0.6192, pr.rec@30=0.03132, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=26, misc.num_neg=70289, misc.num_anchors=70400, misc.lr=0.0002457, misc.mem_usage=87.1
+runtime.step=650, runtime.steptime=15.05, runtime.voxel_gene_time=0.006289, runtime.prep_time=2.619, loss.cls_loss=0.5322, loss.cls_loss_rt=0.5005, loss.loc_loss=0.8918, loss.loc_loss_rt=0.8248, loss.loc_elem=[0.01288, 0.02006, 0.1333, 0.02758, 0.03083, 0.03802, 0.1497], loss.cls_pos_rt=0.425, loss.cls_neg_rt=0.07548, loss.dir_rt=0.6822, rpn_acc=0.9988, pr.prec@10=0.03435, pr.rec@10=0.6438, pr.prec@30=0.5679, pr.rec@30=0.06701, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=143, misc.num_neg=70020, misc.num_anchors=70400, misc.lr=0.0002493, misc.mem_usage=86.8
+runtime.step=700, runtime.steptime=15.26, runtime.voxel_gene_time=0.006022, runtime.prep_time=2.435, loss.cls_loss=0.5169, loss.cls_loss_rt=0.4872, loss.loc_loss=0.893, loss.loc_loss_rt=0.7822, loss.loc_elem=[0.01261, 0.01683, 0.1344, 0.03221, 0.02601, 0.04156, 0.1275], loss.cls_pos_rt=0.4286, loss.cls_neg_rt=0.05862, loss.dir_rt=0.6734, rpn_acc=0.9988, pr.prec@10=0.03534, pr.rec@10=0.6409, pr.prec@30=0.6744, pr.rec@30=0.09391, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=61, misc.num_neg=70226, misc.num_anchors=70400, misc.lr=0.0002532, misc.mem_usage=86.7
+runtime.step=750, runtime.steptime=15.27, runtime.voxel_gene_time=0.005993, runtime.prep_time=2.601, loss.cls_loss=0.5142, loss.cls_loss_rt=0.4595, loss.loc_loss=0.8443, loss.loc_loss_rt=0.6876, loss.loc_elem=[0.01376, 0.01414, 0.1314, 0.02511, 0.02484, 0.02999, 0.1046], loss.cls_pos_rt=0.3827, loss.cls_neg_rt=0.07687, loss.dir_rt=0.6637, rpn_acc=0.9988, pr.prec@10=0.04058, pr.rec@10=0.6304, pr.prec@30=0.6548, pr.rec@30=0.1095, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=31, misc.num_neg=70313, misc.num_anchors=70400, misc.lr=0.0002574, misc.mem_usage=86.7
+runtime.step=800, runtime.steptime=15.16, runtime.voxel_gene_time=0.007238, runtime.prep_time=2.557, loss.cls_loss=0.508, loss.cls_loss_rt=0.4561, loss.loc_loss=0.8669, loss.loc_loss_rt=0.7525, loss.loc_elem=[0.01405, 0.01557, 0.1348, 0.02296, 0.02564, 0.03947, 0.1238], loss.cls_pos_rt=0.3876, loss.cls_neg_rt=0.06848, loss.dir_rt=0.6857, rpn_acc=0.9989, pr.prec@10=0.04178, pr.rec@10=0.6361, pr.prec@30=0.4986, pr.rec@30=0.1421, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=106, misc.num_neg=70099, misc.num_anchors=70400, misc.lr=0.0002618, misc.mem_usage=86.7
+runtime.step=850, runtime.steptime=15.09, runtime.voxel_gene_time=0.00584, runtime.prep_time=2.649, loss.cls_loss=0.5023, loss.cls_loss_rt=0.5188, loss.loc_loss=0.8544, loss.loc_loss_rt=0.8766, loss.loc_elem=[0.01178, 0.0216, 0.1686, 0.02613, 0.01832, 0.03337, 0.1585], loss.cls_pos_rt=0.4416, loss.cls_neg_rt=0.07725, loss.dir_rt=0.6681, rpn_acc=0.9989, pr.prec@10=0.0374, pr.rec@10=0.64, pr.prec@30=0.6677, pr.rec@30=0.134, pr.prec@50=0.0, pr.rec@50=0.0, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=128211, misc.num_pos=144, misc.num_neg=69992, misc.num_anchors=70400, misc.lr=0.0002665, misc.mem_usage=87.0
+runtime.step=900, runtime.steptime=15.33, runtime.voxel_gene_time=0.006146, runtime.prep_time=2.533, loss.cls_loss=0.4944, loss.cls_loss_rt=0.4865, loss.loc_loss=0.8516, loss.loc_loss_rt=0.8371, loss.loc_elem=[0.01504, 0.01178, 0.164, 0.02516, 0.02313, 0.03751, 0.1419], loss.cls_pos_rt=0.4318, loss.cls_neg_rt=0.05462, loss.dir_rt=0.6531, rpn_acc=0.9989, pr.prec@10=0.04221, pr.rec@10=0.6549, pr.prec@30=0.562, pr.rec@30=0.1807, pr.prec@50=1.0, pr.rec@50=0.0009339, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=118, misc.num_neg=70063, misc.num_anchors=70400, misc.lr=0.0002715, misc.mem_usage=87.0
+runtime.step=950, runtime.steptime=15.2, runtime.voxel_gene_time=0.005352, runtime.prep_time=2.345, loss.cls_loss=0.4854, loss.cls_loss_rt=0.5038, loss.loc_loss=0.8422, loss.loc_loss_rt=0.8652, loss.loc_elem=[0.01252, 0.0174, 0.1428, 0.0333, 0.02872, 0.0443, 0.1535], loss.cls_pos_rt=0.3959, loss.cls_neg_rt=0.1079, loss.dir_rt=0.6951, rpn_acc=0.9988, pr.prec@10=0.04415, pr.rec@10=0.6467, pr.prec@30=0.6546, pr.rec@30=0.185, pr.prec@50=1.0, pr.rec@50=0.001993, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=128159, misc.num_pos=106, misc.num_neg=70107, misc.num_anchors=70400, misc.lr=0.0002768, misc.mem_usage=87.1
+runtime.step=1000, runtime.steptime=15.24, runtime.voxel_gene_time=0.006135, runtime.prep_time=2.458, loss.cls_loss=0.4863, loss.cls_loss_rt=0.5275, loss.loc_loss=0.8536, loss.loc_loss_rt=0.738, loss.loc_elem=[0.01454, 0.01601, 0.1199, 0.02702, 0.02754, 0.03249, 0.1315], loss.cls_pos_rt=0.3842, loss.cls_neg_rt=0.1433, loss.dir_rt=0.6447, rpn_acc=0.9989, pr.prec@10=0.0477, pr.rec@10=0.6534, pr.prec@30=0.5589, pr.rec@30=0.1954, pr.prec@50=0.9878, pr.rec@50=0.01263, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=157, misc.num_neg=69989, misc.num_anchors=70400, misc.lr=0.0002824, misc.mem_usage=87.5
+runtime.step=1050, runtime.steptime=15.29, runtime.voxel_gene_time=0.006369, runtime.prep_time=2.404, loss.cls_loss=0.4674, loss.cls_loss_rt=0.501, loss.loc_loss=0.7955, loss.loc_loss_rt=0.8243, loss.loc_elem=[0.01885, 0.01436, 0.1082, 0.04231, 0.04209, 0.06229, 0.1241], loss.cls_pos_rt=0.4011, loss.cls_neg_rt=0.09989, loss.dir_rt=0.6421, rpn_acc=0.9988, pr.prec@10=0.03961, pr.rec@10=0.6941, pr.prec@30=0.5916, pr.rec@30=0.226, pr.prec@50=1.0, pr.rec@50=0.01028, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=132, misc.num_neg=70045, misc.num_anchors=70400, misc.lr=0.0002882, misc.mem_usage=86.8
+runtime.step=1100, runtime.steptime=15.14, runtime.voxel_gene_time=0.006115, runtime.prep_time=2.504, loss.cls_loss=0.471, loss.cls_loss_rt=0.4756, loss.loc_loss=0.8131, loss.loc_loss_rt=0.8002, loss.loc_elem=[0.01523, 0.01606, 0.1363, 0.02853, 0.02863, 0.04035, 0.135], loss.cls_pos_rt=0.3996, loss.cls_neg_rt=0.07603, loss.dir_rt=0.6801, rpn_acc=0.9989, pr.prec@10=0.03804, pr.rec@10=0.6914, pr.prec@30=0.5515, pr.rec@30=0.2487, pr.prec@50=0.9756, pr.rec@50=0.01841, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=18, misc.num_neg=70341, misc.num_anchors=70400, misc.lr=0.0002943, misc.mem_usage=87.1
+runtime.step=1150, runtime.steptime=15.17, runtime.voxel_gene_time=0.006318, runtime.prep_time=2.556, loss.cls_loss=0.4737, loss.cls_loss_rt=0.533, loss.loc_loss=0.7861, loss.loc_loss_rt=1.049, loss.loc_elem=[0.01484, 0.02581, 0.1742, 0.04298, 0.04914, 0.07887, 0.1386], loss.cls_pos_rt=0.464, loss.cls_neg_rt=0.06901, loss.dir_rt=0.6825, rpn_acc=0.9989, pr.prec@10=0.05125, pr.rec@10=0.6815, pr.prec@30=0.6545, pr.rec@30=0.2156, pr.prec@50=1.0, pr.rec@50=0.02537, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=127918, misc.num_pos=87, misc.num_neg=70170, misc.num_anchors=70400, misc.lr=0.0003006, misc.mem_usage=87.1
+runtime.step=1200, runtime.steptime=15.05, runtime.voxel_gene_time=0.006564, runtime.prep_time=2.489, loss.cls_loss=0.461, loss.cls_loss_rt=0.452, loss.loc_loss=0.7776, loss.loc_loss_rt=0.8201, loss.loc_elem=[0.01529, 0.01115, 0.1448, 0.02487, 0.02492, 0.03835, 0.1507], loss.cls_pos_rt=0.3497, loss.cls_neg_rt=0.1023, loss.dir_rt=0.6693, rpn_acc=0.9989, pr.prec@10=0.04623, pr.rec@10=0.702, pr.prec@30=0.5257, pr.rec@30=0.2555, pr.prec@50=0.9419, pr.rec@50=0.04937, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=144, misc.num_neg=70020, misc.num_anchors=70400, misc.lr=0.0003073, misc.mem_usage=86.6
+runtime.step=1250, runtime.steptime=15.08, runtime.voxel_gene_time=0.005608, runtime.prep_time=2.323, loss.cls_loss=0.4626, loss.cls_loss_rt=0.4954, loss.loc_loss=0.7888, loss.loc_loss_rt=0.7801, loss.loc_elem=[0.01243, 0.01753, 0.1454, 0.02886, 0.03185, 0.03261, 0.1214], loss.cls_pos_rt=0.4028, loss.cls_neg_rt=0.09263, loss.dir_rt=0.6949, rpn_acc=0.9989, pr.prec@10=0.04371, pr.rec@10=0.7035, pr.prec@30=0.5412, pr.rec@30=0.2874, pr.prec@50=0.977, pr.rec@50=0.06276, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=79, misc.num_neg=70199, misc.num_anchors=70400, misc.lr=0.0003142, misc.mem_usage=86.8
+runtime.step=1300, runtime.steptime=15.14, runtime.voxel_gene_time=0.006102, runtime.prep_time=2.479, loss.cls_loss=0.4656, loss.cls_loss_rt=0.4711, loss.loc_loss=0.8214, loss.loc_loss_rt=0.7624, loss.loc_elem=[0.01166, 0.01685, 0.1421, 0.01939, 0.02174, 0.0345, 0.135], loss.cls_pos_rt=0.3802, loss.cls_neg_rt=0.09092, loss.dir_rt=0.6811, rpn_acc=0.9989, pr.prec@10=0.04226, pr.rec@10=0.6888, pr.prec@30=0.6356, pr.rec@30=0.2381, pr.prec@50=0.9758, pr.rec@50=0.05152, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=10, misc.num_neg=70372, misc.num_anchors=70400, misc.lr=0.0003213, misc.mem_usage=86.7
+runtime.step=1350, runtime.steptime=15.29, runtime.voxel_gene_time=0.006192, runtime.prep_time=2.524, loss.cls_loss=0.4675, loss.cls_loss_rt=0.4136, loss.loc_loss=0.7818, loss.loc_loss_rt=0.7131, loss.loc_elem=[0.01336, 0.01325, 0.1222, 0.0238, 0.02168, 0.02865, 0.1336], loss.cls_pos_rt=0.3195, loss.cls_neg_rt=0.09404, loss.dir_rt=0.6426, rpn_acc=0.9989, pr.prec@10=0.04618, pr.rec@10=0.6784, pr.prec@30=0.6172, pr.rec@30=0.2396, pr.prec@50=0.9708, pr.rec@50=0.05043, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=122, misc.num_neg=70072, misc.num_anchors=70400, misc.lr=0.0003288, misc.mem_usage=87.0
+runtime.step=1400, runtime.steptime=14.8, runtime.voxel_gene_time=0.007612, runtime.prep_time=2.589, loss.cls_loss=0.4552, loss.cls_loss_rt=0.4627, loss.loc_loss=0.7935, loss.loc_loss_rt=0.707, loss.loc_elem=[0.01106, 0.01481, 0.1308, 0.0205, 0.02471, 0.03971, 0.1119], loss.cls_pos_rt=0.3733, loss.cls_neg_rt=0.08932, loss.dir_rt=0.6466, rpn_acc=0.9989, pr.prec@10=0.05109, pr.rec@10=0.677, pr.prec@30=0.6221, pr.rec@30=0.2646, pr.prec@50=0.9749, pr.rec@50=0.07545, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=44, misc.num_neg=70263, misc.num_anchors=70400, misc.lr=0.0003364, misc.mem_usage=86.7
+runtime.step=1450, runtime.steptime=15.06, runtime.voxel_gene_time=0.006203, runtime.prep_time=2.53, loss.cls_loss=0.4574, loss.cls_loss_rt=0.4214, loss.loc_loss=0.7907, loss.loc_loss_rt=0.686, loss.loc_elem=[0.01116, 0.01472, 0.1159, 0.02663, 0.02314, 0.04571, 0.1057], loss.cls_pos_rt=0.3553, loss.cls_neg_rt=0.06608, loss.dir_rt=0.6624, rpn_acc=0.9989, pr.prec@10=0.05029, pr.rec@10=0.6777, pr.prec@30=0.5469, pr.rec@30=0.2687, pr.prec@50=0.9552, pr.rec@50=0.09137, pr.prec@70=1.0, pr.rec@70=0.0003061, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=127466, misc.num_pos=91, misc.num_neg=70142, misc.num_anchors=70400, misc.lr=0.0003444, misc.mem_usage=87.1
+runtime.step=1500, runtime.steptime=15.04, runtime.voxel_gene_time=0.006018, runtime.prep_time=2.426, loss.cls_loss=0.4527, loss.cls_loss_rt=0.4627, loss.loc_loss=0.7653, loss.loc_loss_rt=0.655, loss.loc_elem=[0.01294, 0.01694, 0.1142, 0.01796, 0.01912, 0.03491, 0.1115], loss.cls_pos_rt=0.3816, loss.cls_neg_rt=0.08108, loss.dir_rt=0.6555, rpn_acc=0.999, pr.prec@10=0.04739, pr.rec@10=0.7116, pr.prec@30=0.6386, pr.rec@30=0.2932, pr.prec@50=0.9826, pr.rec@50=0.09749, pr.prec@70=1.0, pr.rec@70=0.000157, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=69, misc.num_neg=70202, misc.num_anchors=70400, misc.lr=0.0003526, misc.mem_usage=87.2
+runtime.step=1550, runtime.steptime=15.14, runtime.voxel_gene_time=0.006247, runtime.prep_time=2.557, loss.cls_loss=0.4425, loss.cls_loss_rt=0.4729, loss.loc_loss=0.7706, loss.loc_loss_rt=0.7999, loss.loc_elem=[0.01183, 0.0217, 0.1327, 0.02042, 0.02579, 0.05391, 0.1336], loss.cls_pos_rt=0.3872, loss.cls_neg_rt=0.08571, loss.dir_rt=0.6758, rpn_acc=0.9989, pr.prec@10=0.05151, pr.rec@10=0.7144, pr.prec@30=0.6515, pr.rec@30=0.2838, pr.prec@50=1.0, pr.rec@50=0.08793, pr.prec@70=1.0, pr.rec@70=0.0001503, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=9, misc.num_neg=70371, misc.num_anchors=70400, misc.lr=0.000361, misc.mem_usage=86.7
+runtime.step=1600, runtime.steptime=14.89, runtime.voxel_gene_time=0.006363, runtime.prep_time=2.571, loss.cls_loss=0.443, loss.cls_loss_rt=0.4182, loss.loc_loss=0.7255, loss.loc_loss_rt=0.6438, loss.loc_elem=[0.01049, 0.01251, 0.09682, 0.02969, 0.03004, 0.04432, 0.09805], loss.cls_pos_rt=0.2817, loss.cls_neg_rt=0.1365, loss.dir_rt=0.6513, rpn_acc=0.999, pr.prec@10=0.04764, pr.rec@10=0.7017, pr.prec@30=0.6063, pr.rec@30=0.2544, pr.prec@50=0.9815, pr.rec@50=0.09252, pr.prec@70=1.0, pr.rec@70=0.0006337, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=14, misc.num_neg=70356, misc.num_anchors=70400, misc.lr=0.0003698, misc.mem_usage=86.7
+runtime.step=1650, runtime.steptime=15.07, runtime.voxel_gene_time=0.006139, runtime.prep_time=2.369, loss.cls_loss=0.4436, loss.cls_loss_rt=0.5071, loss.loc_loss=0.7666, loss.loc_loss_rt=0.8269, loss.loc_elem=[0.009473, 0.01918, 0.1686, 0.02612, 0.0223, 0.03354, 0.1342], loss.cls_pos_rt=0.4305, loss.cls_neg_rt=0.07668, loss.dir_rt=0.705, rpn_acc=0.999, pr.prec@10=0.04889, pr.rec@10=0.72, pr.prec@30=0.635, pr.rec@30=0.299, pr.prec@50=0.953, pr.rec@50=0.1105, pr.prec@70=1.0, pr.rec@70=0.002493, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=104, misc.num_neg=70106, misc.num_anchors=70400, misc.lr=0.0003787, misc.mem_usage=86.7
+runtime.step=1700, runtime.steptime=15.24, runtime.voxel_gene_time=0.006393, runtime.prep_time=2.602, loss.cls_loss=0.4289, loss.cls_loss_rt=0.485, loss.loc_loss=0.7249, loss.loc_loss_rt=0.6895, loss.loc_elem=[0.01088, 0.0171, 0.134, 0.02114, 0.02232, 0.02244, 0.1168], loss.cls_pos_rt=0.3702, loss.cls_neg_rt=0.1148, loss.dir_rt=0.638, rpn_acc=0.999, pr.prec@10=0.04726, pr.rec@10=0.7183, pr.prec@30=0.6059, pr.rec@30=0.3096, pr.prec@50=0.9719, pr.rec@50=0.1154, pr.prec@70=1.0, pr.rec@70=0.001367, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=112, misc.num_neg=70106, misc.num_anchors=70400, misc.lr=0.0003879, misc.mem_usage=86.9
+runtime.step=1750, runtime.steptime=15.1, runtime.voxel_gene_time=0.006767, runtime.prep_time=2.554, loss.cls_loss=0.4296, loss.cls_loss_rt=0.3427, loss.loc_loss=0.7245, loss.loc_loss_rt=0.6407, loss.loc_elem=[0.0126, 0.0127, 0.1114, 0.024, 0.02499, 0.04414, 0.09055], loss.cls_pos_rt=0.2814, loss.cls_neg_rt=0.06126, loss.dir_rt=0.6589, rpn_acc=0.999, pr.prec@10=0.05819, pr.rec@10=0.6827, pr.prec@30=0.6802, pr.rec@30=0.2786, pr.prec@50=0.9625, pr.rec@50=0.1022, pr.prec@70=1.0, pr.rec@70=0.003187, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=95, misc.num_neg=70159, misc.num_anchors=70400, misc.lr=0.0003974, misc.mem_usage=86.7
+runtime.step=1800, runtime.steptime=15.17, runtime.voxel_gene_time=0.006121, runtime.prep_time=2.624, loss.cls_loss=0.4431, loss.cls_loss_rt=0.469, loss.loc_loss=0.783, loss.loc_loss_rt=0.8052, loss.loc_elem=[0.01415, 0.01598, 0.09182, 0.04327, 0.04169, 0.07025, 0.1254], loss.cls_pos_rt=0.3959, loss.cls_neg_rt=0.07308, loss.dir_rt=0.6407, rpn_acc=0.999, pr.prec@10=0.04619, pr.rec@10=0.7332, pr.prec@30=0.5392, pr.rec@30=0.3145, pr.prec@50=0.9656, pr.rec@50=0.1282, pr.prec@70=1.0, pr.rec@70=0.002681, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=126527, misc.num_pos=22, misc.num_neg=70316, misc.num_anchors=70400, misc.lr=0.000407, misc.mem_usage=87.0
+runtime.step=1850, runtime.steptime=15.24, runtime.voxel_gene_time=0.005916, runtime.prep_time=2.48, loss.cls_loss=0.4477, loss.cls_loss_rt=0.4779, loss.loc_loss=0.7612, loss.loc_loss_rt=0.6951, loss.loc_elem=[0.01104, 0.01452, 0.1292, 0.02621, 0.02528, 0.03191, 0.1093], loss.cls_pos_rt=0.3794, loss.cls_neg_rt=0.09855, loss.dir_rt=0.7091, rpn_acc=0.999, pr.prec@10=0.05334, pr.rec@10=0.6884, pr.prec@30=0.6563, pr.rec@30=0.3046, pr.prec@50=0.962, pr.rec@50=0.1209, pr.prec@70=1.0, pr.rec@70=0.005082, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=55, misc.num_neg=70219, misc.num_anchors=70400, misc.lr=0.000417, misc.mem_usage=86.7
+runtime.step=1900, runtime.steptime=15.08, runtime.voxel_gene_time=0.005787, runtime.prep_time=2.554, loss.cls_loss=0.4482, loss.cls_loss_rt=0.4854, loss.loc_loss=0.8293, loss.loc_loss_rt=0.9368, loss.loc_elem=[0.01271, 0.01892, 0.1869, 0.02964, 0.04131, 0.04756, 0.1314], loss.cls_pos_rt=0.3818, loss.cls_neg_rt=0.1035, loss.dir_rt=0.6684, rpn_acc=0.999, pr.prec@10=0.04719, pr.rec@10=0.7032, pr.prec@30=0.6086, pr.rec@30=0.3039, pr.prec@50=0.9635, pr.rec@50=0.1353, pr.prec@70=1.0, pr.rec@70=0.005123, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=94, misc.num_neg=70174, misc.num_anchors=70400, misc.lr=0.0004271, misc.mem_usage=86.8
+runtime.step=1950, runtime.steptime=15.26, runtime.voxel_gene_time=0.006938, runtime.prep_time=2.588, loss.cls_loss=0.4189, loss.cls_loss_rt=0.4319, loss.loc_loss=0.7229, loss.loc_loss_rt=0.6924, loss.loc_elem=[0.00952, 0.01809, 0.1228, 0.01949, 0.02269, 0.03685, 0.1168], loss.cls_pos_rt=0.3614, loss.cls_neg_rt=0.07049, loss.dir_rt=0.6662, rpn_acc=0.999, pr.prec@10=0.04996, pr.rec@10=0.7301, pr.prec@30=0.6452, pr.rec@30=0.321, pr.prec@50=0.9741, pr.rec@50=0.1416, pr.prec@70=1.0, pr.rec@70=0.006124, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=128278, misc.num_pos=77, misc.num_neg=70159, misc.num_anchors=70400, misc.lr=0.0004375, misc.mem_usage=87.2
+runtime.step=2000, runtime.steptime=15.03, runtime.voxel_gene_time=0.007, runtime.prep_time=2.487, loss.cls_loss=0.4213, loss.cls_loss_rt=0.4661, loss.loc_loss=0.7338, loss.loc_loss_rt=0.7672, loss.loc_elem=[0.01334, 0.01217, 0.1437, 0.02408, 0.02265, 0.03807, 0.1296], loss.cls_pos_rt=0.3579, loss.cls_neg_rt=0.1081, loss.dir_rt=0.6649, rpn_acc=0.999, pr.prec@10=0.05809, pr.rec@10=0.7118, pr.prec@30=0.6815, pr.rec@30=0.3072, pr.prec@50=0.9587, pr.rec@50=0.1298, pr.prec@70=1.0, pr.rec@70=0.01211, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=62, misc.num_neg=70230, misc.num_anchors=70400, misc.lr=0.0004481, misc.mem_usage=86.8
+runtime.step=2050, runtime.steptime=15.08, runtime.voxel_gene_time=0.006374, runtime.prep_time=2.548, loss.cls_loss=0.4193, loss.cls_loss_rt=0.4036, loss.loc_loss=0.7072, loss.loc_loss_rt=0.7569, loss.loc_elem=[0.01389, 0.01211, 0.1324, 0.02941, 0.03391, 0.03507, 0.1217], loss.cls_pos_rt=0.3358, loss.cls_neg_rt=0.0678, loss.dir_rt=0.6219, rpn_acc=0.999, pr.prec@10=0.05715, pr.rec@10=0.7211, pr.prec@30=0.6155, pr.rec@30=0.3401, pr.prec@50=0.9718, pr.rec@50=0.1536, pr.prec@70=1.0, pr.rec@70=0.01122, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=78, misc.num_neg=70186, misc.num_anchors=70400, misc.lr=0.000459, misc.mem_usage=86.7
+runtime.step=2100, runtime.steptime=15.13, runtime.voxel_gene_time=0.005933, runtime.prep_time=2.51, loss.cls_loss=0.4332, loss.cls_loss_rt=0.442, loss.loc_loss=0.6951, loss.loc_loss_rt=0.6874, loss.loc_elem=[0.01384, 0.01306, 0.1082, 0.02602, 0.02209, 0.03505, 0.1254], loss.cls_pos_rt=0.3772, loss.cls_neg_rt=0.06485, loss.dir_rt=0.6866, rpn_acc=0.999, pr.prec@10=0.04897, pr.rec@10=0.7356, pr.prec@30=0.5963, pr.rec@30=0.3314, pr.prec@50=0.9751, pr.rec@50=0.1493, pr.prec@70=1.0, pr.rec@70=0.01697, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=23, misc.num_neg=70337, misc.num_anchors=70400, misc.lr=0.00047, misc.mem_usage=87.2
+runtime.step=2150, runtime.steptime=15.18, runtime.voxel_gene_time=0.006191, runtime.prep_time=2.386, loss.cls_loss=0.4275, loss.cls_loss_rt=0.392, loss.loc_loss=0.705, loss.loc_loss_rt=0.652, loss.loc_elem=[0.0106, 0.01206, 0.1304, 0.02224, 0.02372, 0.0294, 0.09763], loss.cls_pos_rt=0.3231, loss.cls_neg_rt=0.06894, loss.dir_rt=0.6286, rpn_acc=0.999, pr.prec@10=0.05453, pr.rec@10=0.7077, pr.prec@30=0.6079, pr.rec@30=0.3315, pr.prec@50=0.9511, pr.rec@50=0.1503, pr.prec@70=1.0, pr.rec@70=0.02072, pr.prec@80=1.0, pr.rec@80=0.0007732, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=127, misc.num_neg=70058, misc.num_anchors=70400, misc.lr=0.0004813, misc.mem_usage=87.1
+runtime.step=2200, runtime.steptime=15.13, runtime.voxel_gene_time=0.006417, runtime.prep_time=2.548, loss.cls_loss=0.4243, loss.cls_loss_rt=0.4376, loss.loc_loss=0.7278, loss.loc_loss_rt=0.8338, loss.loc_elem=[0.01186, 0.01599, 0.1527, 0.03527, 0.03527, 0.05998, 0.1058], loss.cls_pos_rt=0.3535, loss.cls_neg_rt=0.08409, loss.dir_rt=0.6598, rpn_acc=0.999, pr.prec@10=0.04824, pr.rec@10=0.747, pr.prec@30=0.6206, pr.rec@30=0.3353, pr.prec@50=0.9601, pr.rec@50=0.1509, pr.prec@70=1.0, pr.rec@70=0.01457, pr.prec@80=1.0, pr.rec@80=0.0003133, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=34, misc.num_neg=70317, misc.num_anchors=70400, misc.lr=0.0004928, misc.mem_usage=86.7
+runtime.step=2250, runtime.steptime=15.27, runtime.voxel_gene_time=0.006251, runtime.prep_time=2.617, loss.cls_loss=0.4479, loss.cls_loss_rt=0.4926, loss.loc_loss=0.8252, loss.loc_loss_rt=0.8212, loss.loc_elem=[0.01431, 0.01512, 0.1473, 0.02943, 0.02703, 0.03932, 0.1381], loss.cls_pos_rt=0.4144, loss.cls_neg_rt=0.07825, loss.dir_rt=0.6339, rpn_acc=0.999, pr.prec@10=0.0495, pr.rec@10=0.7186, pr.prec@30=0.5651, pr.rec@30=0.3185, pr.prec@50=0.9613, pr.rec@50=0.1408, pr.prec@70=1.0, pr.rec@70=0.01333, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=134, misc.num_neg=70033, misc.num_anchors=70400, misc.lr=0.0005046, misc.mem_usage=86.8
+runtime.step=2300, runtime.steptime=15.12, runtime.voxel_gene_time=0.006184, runtime.prep_time=2.525, loss.cls_loss=0.4241, loss.cls_loss_rt=0.4489, loss.loc_loss=0.6958, loss.loc_loss_rt=0.8141, loss.loc_elem=[0.01163, 0.01435, 0.1668, 0.02705, 0.02742, 0.0334, 0.1264], loss.cls_pos_rt=0.3888, loss.cls_neg_rt=0.06015, loss.dir_rt=0.671, rpn_acc=0.999, pr.prec@10=0.06231, pr.rec@10=0.7108, pr.prec@30=0.6546, pr.rec@30=0.3194, pr.prec@50=0.9368, pr.rec@50=0.1532, pr.prec@70=1.0, pr.rec@70=0.02491, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=136000, misc.num_pos=55, misc.num_neg=70239, misc.num_anchors=70400, misc.lr=0.0005165, misc.mem_usage=86.7
+#################################
+# EVAL
+#################################
+Generate output labels...
+generate label finished(2.31/s). start eval:
+name 'self' is not defined
+[
+  {
+    "token": "4d4e4c0fd8ec49bdb12788e0a9ecbce3"
+  },
+  {
+    "token": "0d6668bcb0644bbaaee81c17cc308845"
+  },
+  {
+    "token": "abf3d91d3c28407e80e3334fe89c03cb"
+  }
+]
