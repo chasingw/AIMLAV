@@ -144,6 +144,7 @@ def train(config_path,
     """train a VoxelNet model specified by a config file.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#     device = torch.device("cpu")
     
     model_dir = str(Path(model_dir).resolve())
     if create_folder:
@@ -444,6 +445,7 @@ def evaluate(config_path,
     assert len(kwargs) == 0
     model_dir = str(Path(model_dir).resolve())
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#     device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
     result_name = 'eval_results'
     if result_path is None:
         model_dir = Path(model_dir)

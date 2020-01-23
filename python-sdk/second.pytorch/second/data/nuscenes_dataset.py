@@ -17,7 +17,6 @@ from second.data.dataset import Dataset, register_dataset
 from second.utils.eval import get_coco_eval_result, get_official_eval_result
 from second.utils.progress_bar import progress_bar_iter as prog_bar
 from second.utils.timer import simple_timer
-from nuscenes.eval.detection.config import config_factory
 
 
 @register_dataset
