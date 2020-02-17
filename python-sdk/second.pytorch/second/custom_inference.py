@@ -9,7 +9,6 @@ from second.utils import simplevis
 from second.pytorch.train import build_network
 from second.protos import pipeline_pb2
 from second.utils import config_tool
-from IPython.display import Image
 
 def read_config_file(config_path):
     config = pipeline_pb2.TrainEvalPipelineConfig()
@@ -92,3 +91,15 @@ def visualize(pred, points, vis_voxel_size=[0.1, 0.1, 0.1], vis_point_range=[-50
     bev_map = simplevis.point_to_vis_bev(points, vis_voxel_size, vis_point_range)
     bev_map = simplevis.draw_box_in_bev(bev_map, vis_point_range, boxes_lidar, [0, 255, 0], 2)
     return bev_map
+
+
+def infer(config_path, ckpt_path, point_cloud_key):
+    input_cfg, model_cfg, device = read_config_file(config_path)
+    target_assigner, voxel_generator, device, net = build_net_v2(ckpt_path, model_cfg, device)
+    anchors = generate_anchors(voxel_generator, target_assigner, model_cfg, device)
+    infos, root_path = read_kitti_info_file(input_cfg)  
+    points, info = load_point_cloud(infos, point_cloud_key, root_path)
+    coords, voxels, num_points = voxel_generator_v2(points, voxel_generator, device)
+    pred = detection_v2(anchors, voxels, num_points, coords, net)
+    bev_map = visualize(pred, points)
+    return bev_map, info

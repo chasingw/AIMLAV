@@ -1,0 +1,235 @@
+model: {
+  second: {
+    network_class_name: "VoxelNet"
+    voxel_generator {
+      point_cloud_range : [0, -40, -3, 70.4, 40, 1]
+      # point_cloud_range : [0, -32.0, -3, 52.8, 32.0, 1]
+      voxel_size : [0.05, 0.05, 0.1]
+      max_number_of_points_per_voxel : 5
+    }
+
+    voxel_feature_extractor: {
+      module_class_name: "SimpleVoxel"
+      num_filters: [16]
+      with_distance: false
+      num_input_features: 4
+    }
+    middle_feature_extractor: {
+      module_class_name: "SpMiddleFHD"
+      # num_filters_down1: [] # protobuf don't support empty list.
+      # num_filters_down2: []
+      downsample_factor: 8
+      num_input_features: 4
+    }
+    rpn: {
+      module_class_name: "RPNV2"
+      layer_nums: [5]
+      layer_strides: [1]
+      num_filters: [128]
+      upsample_strides: [1]
+      num_upsample_filters: [128]
+      use_groupnorm: false
+      num_groups: 32
+      num_input_features: 128
+    }
+    loss: {
+      classification_loss: {
+        weighted_sigmoid_focal: {
+          alpha: 0.25
+          gamma: 2.0
+          anchorwise_output: true
+        }
+      }
+      localization_loss: {
+        weighted_smooth_l1: {
+          sigma: 3.0
+          code_weight: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        }
+      }
+      classification_weight: 1.0
+      localization_weight: 2.0
+    }
+    num_point_features: 4 # model's num point feature should be independent of dataset
+    # Outputs
+    use_sigmoid_score: true
+    encode_background_as_zeros: true
+    encode_rad_error_by_sin: true
+    sin_error_factor: 1.0
+
+    use_direction_classifier: true # this can help for orientation benchmark
+    direction_loss_weight: 0.2 # enough.
+    num_direction_bins: 2
+    direction_limit_offset: 1
+
+    # Loss
+    pos_class_weight: 1.0
+    neg_class_weight: 1.0
+
+    loss_norm_type: NormByNumPositives
+    # Postprocess
+    post_center_limit_range: [0, -40, -2.2, 70.4, 40, 0.8]
+    nms_class_agnostic: false # only valid in multi-class nms
+
+    box_coder: {
+      ground_box3d_coder: {
+        linear_dim: false
+        encode_angle_vector: false
+      }
+    }
+    target_assigner: {
+      class_settings: {
+        class_name: "pedestrian"
+        anchor_generator_range: {
+          sizes: [0.66344886, 0.7256437, 1.75748069] # wlh
+          anchor_ranges: [-49.6, -49.6, -0.73911038, 49.6, 49.6, -0.73911038]
+          rotations: [0] # DON'T modify this unless you are very familiar with my code.
+          # custom_values: [0, 0] # velocity vector base value
+        }
+        matched_threshold : 0.5
+        unmatched_threshold : 0.35
+        use_rotate_nms: false
+        use_multi_class_nms: false
+        nms_pre_max_size: 1000
+        nms_post_max_size: 300
+        nms_score_threshold: 0.05
+        nms_iou_threshold: 0.5
+        region_similarity_calculator: {
+          distance_similarity: {
+            distance_norm: 1.414 # match range
+            with_rotation: false
+            rotation_alpha: 0.0 # rot error contribution
+          }
+        }
+      }
+      # anchor_generators: {
+      #   anchor_generator_stride: {
+      #     sizes: [1.6, 3.9, 1.56] # wlh
+      #     strides: [0.4, 0.4, 0.0] # if generate only 1 z_center, z_stride will be ignored
+      #     offsets: [0.2, -39.8, -1.00] # origin_offset + strides / 2
+      #     rotations: [0, 1.57] # DON'T modify this unless you are very familiar with my code.
+      #     matched_threshold : 0.6
+      #     unmatched_threshold : 0.45
+      #   }
+      # }
+      sample_positive_fraction : -1
+      sample_size : 512
+      assign_per_class: true
+    }
+  }
+}
+
+train_input_reader: {
+  dataset: {
+    dataset_class_name: "NuScenesDataset"
+    kitti_info_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes/infos_val.pkl"
+    kitti_root_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes"
+  }
+
+  batch_size: 3 # increase for GPU with higher memory
+  preprocess: {
+    max_number_of_voxels: 17000
+    shuffle_points: true
+    num_workers: 3
+    groundtruth_localization_noise_std: [1.0, 1.0, 0.5]
+    # groundtruth_rotation_uniform_noise: [-0.3141592654, 0.3141592654]
+    # groundtruth_rotation_uniform_noise: [-1.57, 1.57]
+    groundtruth_rotation_uniform_noise: [-0.78539816, 0.78539816]
+    global_rotation_uniform_noise: [-0.78539816, 0.78539816]
+    global_scaling_uniform_noise: [0.95, 1.05]
+    global_random_rotation_range_per_object: [0, 0] # pi/4 ~ 3pi/4
+    global_translate_noise_std: [0, 0, 0]
+    anchor_area_threshold: -1
+    remove_points_after_sample: true
+    groundtruth_points_drop_percentage: 0.0
+    groundtruth_drop_max_keep_points: 15
+    remove_unknown_examples: false
+    sample_importance: 1.0
+    random_flip_x: false
+    random_flip_y: true
+    remove_environment: false
+    database_sampler {
+      database_info_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes/kitti_dbinfos_train.pkl"
+      sample_groups {
+        name_to_max_num {
+          key: "pedestrian"
+          value: 8
+        }
+      }
+
+      database_prep_steps {
+        filter_by_min_num_points {
+          min_num_point_pairs {
+            key: "pedestrian"
+            value: 10
+          }
+        }
+      }
+      database_prep_steps {
+        filter_by_difficulty {
+          removed_difficulties: [-1]
+        }
+      }
+      global_random_rotation_range_per_object: [0, 0]
+      rate: 1.0
+    }
+  }
+}
+
+train_config: {
+  optimizer: {
+    adam_optimizer: {
+      learning_rate: {
+        one_cycle: {
+          lr_max: 2.25e-3
+          moms: [0.95, 0.85]
+          div_factor: 10.0
+          pct_start: 0.4
+        }
+      }
+      weight_decay: 0.01
+    }
+    fixed_weight_decay: true
+    use_moving_average: false
+  }
+  # steps: 99040 # 1238 * 120
+  # steps: 49520 # 619 * 80
+  # steps: 30950 # 619 * 80
+  # steps_per_eval: 3095 # 619 * 5
+  # steps: 9280 # 464 * 20
+  # steps_per_eval: 12380 # 619 * 20
+  steps: 464 # 464 * 1
+  steps_per_eval: 619 # 619 * 1
+
+  save_checkpoints_secs : 1800 # half hour
+  save_summary_steps : 10
+  enable_mixed_precision: false 
+  loss_scale_factor: -1
+  clear_metrics_every_epoch: true
+}
+
+eval_input_reader: {
+  dataset: {
+    dataset_class_name: "NuScenesDataset"
+    kitti_info_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes/infos_train.pkl"
+    # kitti_info_path: "/media/yy/960evo/datasets/kitti/kitti_infos_test.pkl"
+    kitti_root_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes"
+  }
+  batch_size: 3 
+  preprocess: {
+    max_number_of_voxels: 40000
+    shuffle_points: false
+    num_workers: 3
+    anchor_area_threshold: -1
+    remove_environment: false
+  }
+}
+
+runtime.step=50, runtime.steptime=3.083, runtime.voxel_gene_time=0.006301, runtime.prep_time=1.019, loss.cls_loss=91.42, loss.cls_loss_rt=13.55, loss.loc_loss=3.874, loss.loc_loss_rt=4.065, loss.loc_elem=[0.3035, 0.2835, 0.4351, 0.06157, 0.325, 0.092, 0.5317], loss.cls_pos_rt=0.2845, loss.cls_neg_rt=13.26, loss.dir_rt=0.6831, rpn_acc=0.947, pr.prec@10=0.0008418, pr.rec@10=1.0, pr.prec@30=0.0009017, pr.rec@30=0.4566, pr.prec@50=0.001054, pr.rec@50=0.06551, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=51000, misc.num_pos=46, misc.num_neg=35139, misc.num_anchors=35200, misc.lr=0.0005558, misc.mem_usage=99.5
+runtime.step=100, runtime.steptime=2.135, runtime.voxel_gene_time=0.004197, runtime.prep_time=1.218, loss.cls_loss=47.84, loss.cls_loss_rt=0.848, loss.loc_loss=3.77, loss.loc_loss_rt=3.536, loss.loc_elem=[0.3129, 0.2929, 0.2614, 0.167, 0.1493, 0.06412, 0.5205], loss.cls_pos_rt=0.6223, loss.cls_neg_rt=0.2257, loss.dir_rt=0.686, rpn_acc=0.973, pr.prec@10=0.0009013, pr.rec@10=0.717, pr.prec@30=0.0009016, pr.rec@30=0.2103, pr.prec@50=0.001054, pr.rec@50=0.03017, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=42435, misc.num_pos=24, misc.num_neg=35171, misc.num_anchors=35200, misc.lr=0.001349, misc.mem_usage=99.5
+runtime.step=150, runtime.steptime=2.26, runtime.voxel_gene_time=0.004253, runtime.prep_time=1.612, loss.cls_loss=32.23, loss.cls_loss_rt=0.91, loss.loc_loss=3.745, loss.loc_loss_rt=3.89, loss.loc_elem=[0.2975, 0.3016, 0.2627, 0.1978, 0.1494, 0.08208, 0.6538], loss.cls_pos_rt=0.8742, loss.cls_neg_rt=0.03588, loss.dir_rt=0.7807, rpn_acc=0.9817, pr.prec@10=0.0009013, pr.rec@10=0.47, pr.prec@30=0.0009016, pr.rec@30=0.1378, pr.prec@50=0.001054, pr.rec@50=0.01978, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=51000, misc.num_pos=44, misc.num_neg=35139, misc.num_anchors=35200, misc.lr=0.002067, misc.mem_usage=99.6
+runtime.step=200, runtime.steptime=2.268, runtime.voxel_gene_time=0.004318, runtime.prep_time=1.098, loss.cls_loss=24.4, loss.cls_loss_rt=0.9098, loss.loc_loss=3.78, loss.loc_loss_rt=3.666, loss.loc_elem=[0.3021, 0.2912, 0.3451, 0.1572, 0.0985, 0.02136, 0.6177], loss.cls_pos_rt=0.5803, loss.cls_neg_rt=0.3295, loss.dir_rt=0.6807, rpn_acc=0.986, pr.prec@10=0.0008973, pr.rec@10=0.3628, pr.prec@30=0.0009016, pr.rec@30=0.1063, pr.prec@50=0.001054, pr.rec@50=0.01526, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=51000, misc.num_pos=29, misc.num_neg=35158, misc.num_anchors=35200, misc.lr=0.002236, misc.mem_usage=99.7
+runtime.step=250, runtime.steptime=2.155, runtime.voxel_gene_time=0.002404, runtime.prep_time=0.3384, loss.cls_loss=19.69, loss.cls_loss_rt=0.8468, loss.loc_loss=3.742, loss.loc_loss_rt=3.24, loss.loc_elem=[0.2008, 0.2175, 0.5959, 0.09573, 0.07138, 0.05536, 0.3836], loss.cls_pos_rt=0.5109, loss.cls_neg_rt=0.3359, loss.dir_rt=0.4552, rpn_acc=0.9887, pr.prec@10=0.0008973, pr.rec@10=0.2999, pr.prec@30=0.0009016, pr.rec@30=0.08788, pr.prec@50=0.001054, pr.rec@50=0.01261, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=42677, misc.num_pos=40, misc.num_neg=35148, misc.num_anchors=35200, misc.lr=0.00197, misc.mem_usage=99.6
+runtime.step=300, runtime.steptime=2.294, runtime.voxel_gene_time=0.003982, runtime.prep_time=0.8036, loss.cls_loss=16.55, loss.cls_loss_rt=0.8283, loss.loc_loss=3.748, loss.loc_loss_rt=4.901, loss.loc_elem=[0.3116, 0.3096, 0.9852, 0.07452, 0.1884, 0.03543, 0.5459], loss.cls_pos_rt=0.8059, loss.cls_neg_rt=0.02235, loss.dir_rt=0.6223, rpn_acc=0.9904, pr.prec@10=0.0008973, pr.rec@10=0.2481, pr.prec@30=0.0009016, pr.rec@30=0.07271, pr.prec@50=0.001054, pr.rec@50=0.01043, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=51000, misc.num_pos=47, misc.num_neg=35139, misc.num_anchors=35200, misc.lr=0.001444, misc.mem_usage=97.4
+runtime.step=350, runtime.steptime=2.125, runtime.voxel_gene_time=0.00391, runtime.prep_time=1.093, loss.cls_loss=14.3, loss.cls_loss_rt=0.7975, loss.loc_loss=3.743, loss.loc_loss_rt=3.978, loss.loc_elem=[0.3064, 0.2862, 0.4464, 0.1416, 0.1403, 0.04697, 0.6212], loss.cls_pos_rt=0.6566, loss.cls_neg_rt=0.1409, loss.dir_rt=0.7025, rpn_acc=0.9917, pr.prec@10=0.0008973, pr.rec@10=0.2105, pr.prec@30=0.0009016, pr.rec@30=0.06168, pr.prec@50=0.001054, pr.rec@50=0.00885, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=41962, misc.num_pos=14, misc.num_neg=35179, misc.num_anchors=35200, misc.lr=0.0008186, misc.mem_usage=97.4
+runtime.step=400, runtime.steptime=2.068, runtime.voxel_gene_time=0.003862, runtime.prep_time=1.565, loss.cls_loss=12.62, loss.cls_loss_rt=0.8775, loss.loc_loss=3.723, loss.loc_loss_rt=3.698, loss.loc_elem=[0.3222, 0.2974, 0.4421, 0.1737, 0.1119, 0.01659, 0.4852], loss.cls_pos_rt=0.8543, loss.cls_neg_rt=0.02324, loss.dir_rt=0.6866, rpn_acc=0.9926, pr.prec@10=0.0008973, pr.rec@10=0.1849, pr.prec@30=0.0009016, pr.rec@30=0.05419, pr.prec@50=0.001054, pr.rec@50=0.007775, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=51000, misc.num_pos=24, misc.num_neg=35171, misc.num_anchors=35200, misc.lr=0.0002881, misc.mem_usage=97.5
+runtime.step=450, runtime.steptime=2.149, runtime.voxel_gene_time=0.003818, runtime.prep_time=1.241, loss.cls_loss=11.31, loss.cls_loss_rt=0.8654, loss.loc_loss=3.716, loss.loc_loss_rt=3.909, loss.loc_elem=[0.3132, 0.3129, 0.4529, 0.05639, 0.1711, 0.02165, 0.6264], loss.cls_pos_rt=0.7676, loss.cls_neg_rt=0.09778, loss.dir_rt=0.6755, rpn_acc=0.9933, pr.prec@10=0.0008973, pr.rec@10=0.1652, pr.prec@30=0.0009016, pr.rec@30=0.04841, pr.prec@50=0.001054, pr.rec@50=0.006946, pr.prec@70=0.0, pr.rec@70=0.0, pr.prec@80=0.0, pr.rec@80=0.0, pr.prec@90=0.0, pr.rec@90=0.0, pr.prec@95=0.0, pr.rec@95=0.0, misc.num_vox=51000, misc.num_pos=24, misc.num_neg=35170, misc.num_anchors=35200, misc.lr=1.603e-05, misc.mem_usage=97.6

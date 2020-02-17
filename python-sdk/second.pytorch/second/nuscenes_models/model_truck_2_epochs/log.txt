@@ -1,0 +1,240 @@
+model: {
+  second: {
+    network_class_name: "VoxelNet"
+    voxel_generator {
+      point_cloud_range : [0, -40, -3, 70.4, 40, 1]
+      # point_cloud_range : [0, -32.0, -3, 52.8, 32.0, 1]
+      voxel_size : [0.05, 0.05, 0.1]
+      max_number_of_points_per_voxel : 5
+    }
+
+    voxel_feature_extractor: {
+      module_class_name: "SimpleVoxel"
+      num_filters: [16]
+      with_distance: false
+      num_input_features: 4
+    }
+    middle_feature_extractor: {
+      module_class_name: "SpMiddleFHD"
+      # num_filters_down1: [] # protobuf don't support empty list.
+      # num_filters_down2: []
+      downsample_factor: 8
+      num_input_features: 4
+    }
+    rpn: {
+      module_class_name: "RPNV2"
+      layer_nums: [5]
+      layer_strides: [1]
+      num_filters: [128]
+      upsample_strides: [1]
+      num_upsample_filters: [128]
+      use_groupnorm: false
+      num_groups: 32
+      num_input_features: 128
+    }
+    loss: {
+      classification_loss: {
+        weighted_sigmoid_focal: {
+          alpha: 0.25
+          gamma: 2.0
+          anchorwise_output: true
+        }
+      }
+      localization_loss: {
+        weighted_smooth_l1: {
+          sigma: 3.0
+          code_weight: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        }
+      }
+      classification_weight: 1.0
+      localization_weight: 2.0
+    }
+    num_point_features: 4 # model's num point feature should be independent of dataset
+    # Outputs
+    use_sigmoid_score: true
+    encode_background_as_zeros: true
+    encode_rad_error_by_sin: true
+    sin_error_factor: 1.0
+
+    use_direction_classifier: true # this can help for orientation benchmark
+    direction_loss_weight: 0.2 # enough.
+    num_direction_bins: 2
+    direction_limit_offset: 1
+
+    # Loss
+    pos_class_weight: 1.0
+    neg_class_weight: 1.0
+
+    loss_norm_type: NormByNumPositives
+    # Postprocess
+    post_center_limit_range: [0, -40, -2.2, 70.4, 40, 0.8]
+    nms_class_agnostic: false # only valid in multi-class nms
+
+    box_coder: {
+      ground_box3d_coder: {
+        linear_dim: false
+        encode_angle_vector: false
+      }
+    }
+    target_assigner: {
+      class_settings: {
+        anchor_generator_range: {
+          sizes: [1.6, 3.9, 1.56] # wlh
+          anchor_ranges: [0, -40.0, -1.00, 70.4, 40.0, -1.00] # carefully set z center
+          rotations: [0, 1.57] # DON'T modify this unless you are very familiar with my code.
+        }
+        matched_threshold : 0.6
+        unmatched_threshold : 0.45
+        class_name: "truck"
+        use_rotate_nms: true
+        use_multi_class_nms: false
+        nms_pre_max_size: 1000
+        nms_post_max_size: 100
+        nms_score_threshold: 0.3 # 0.4 in submit, but 0.3 can get better hard performance
+        nms_iou_threshold: 0.01
+
+        region_similarity_calculator: {
+          nearest_iou_similarity: {
+          }
+        }
+      }
+      # anchor_generators: {
+      #   anchor_generator_stride: {
+      #     sizes: [1.6, 3.9, 1.56] # wlh
+      #     strides: [0.4, 0.4, 0.0] # if generate only 1 z_center, z_stride will be ignored
+      #     offsets: [0.2, -39.8, -1.00] # origin_offset + strides / 2
+      #     rotations: [0, 1.57] # DON'T modify this unless you are very familiar with my code.
+      #     matched_threshold : 0.6
+      #     unmatched_threshold : 0.45
+      #   }
+      # }
+      sample_positive_fraction : -1
+      sample_size : 512
+      assign_per_class: true
+    }
+  }
+}
+
+train_input_reader: {
+  dataset: {
+    dataset_class_name: "NuScenesDatasetD8"
+    kitti_info_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes/infos_val.pkl"
+    kitti_root_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes"
+  }
+
+  batch_size: 3 # increase for GPU with higher memory
+  preprocess: {
+    max_number_of_voxels: 17000
+    shuffle_points: true
+    num_workers: 3
+    groundtruth_localization_noise_std: [1.0, 1.0, 0.5]
+    # groundtruth_rotation_uniform_noise: [-0.3141592654, 0.3141592654]
+    # groundtruth_rotation_uniform_noise: [-1.57, 1.57]
+    groundtruth_rotation_uniform_noise: [-0.78539816, 0.78539816]
+    global_rotation_uniform_noise: [-0.78539816, 0.78539816]
+    global_scaling_uniform_noise: [0.95, 1.05]
+    global_random_rotation_range_per_object: [0, 0] # pi/4 ~ 3pi/4
+    global_translate_noise_std: [0, 0, 0]
+    anchor_area_threshold: -1
+    remove_points_after_sample: true
+    groundtruth_points_drop_percentage: 0.0
+    groundtruth_drop_max_keep_points: 15
+    remove_unknown_examples: false
+    sample_importance: 1.0
+    random_flip_x: false
+    random_flip_y: true
+    remove_environment: false
+    database_sampler {
+      database_info_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes/kitti_dbinfos_train.pkl"
+      sample_groups {
+        name_to_max_num {
+          key: "truck"
+          value: 5
+        }
+      }
+      database_prep_steps {
+        filter_by_min_num_points {
+          min_num_point_pairs {
+            key: "truck"
+            value: 5
+          }
+        }
+      }
+      database_prep_steps {
+        filter_by_difficulty {
+          removed_difficulties: [-1]
+        }
+      }
+      global_random_rotation_range_per_object: [0, 0]
+      rate: 1.0
+    }
+  }
+}
+
+train_config: {
+  optimizer: {
+    adam_optimizer: {
+      learning_rate: {
+        one_cycle: {
+          lr_max: 2.25e-3
+          moms: [0.95, 0.85]
+          div_factor: 10.0
+          pct_start: 0.4
+        }
+      }
+      weight_decay: 0.01
+    }
+    fixed_weight_decay: true
+    use_moving_average: false
+  }
+  # steps: 99040 # 1238 * 120
+  # steps: 49520 # 619 * 80
+  # steps: 30950 # 619 * 80
+  # steps_per_eval: 3095 # 619 * 5
+  # steps: 9280 # 464 * 20
+  # steps_per_eval: 12380 # 619 * 20
+  #steps: 2320 # 464 * 5
+  #steps_per_eval: 3095 # 619 * 5
+  steps: 928 # 464 * 2
+  steps_per_eval: 619 # 619 * 1
+    
+  save_checkpoints_secs : 1800 # half hour
+  save_summary_steps : 10
+  enable_mixed_precision: false 
+  loss_scale_factor: -1
+  clear_metrics_every_epoch: true
+}
+
+eval_input_reader: {
+  dataset: {
+    dataset_class_name: "NuScenesDatasetD8"
+    kitti_info_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes/infos_train.pkl"
+    # kitti_info_path: "/media/yy/960evo/datasets/kitti/kitti_infos_test.pkl"
+    kitti_root_path: "/media/xavier/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes"
+  }
+  batch_size: 3 
+  preprocess: {
+    max_number_of_voxels: 40000
+    shuffle_points: false
+    num_workers: 3
+    anchor_area_threshold: -1
+    remove_environment: false
+  }
+}
+
+runtime.step=50, runtime.steptime=2.872, runtime.voxel_gene_time=0.004527, runtime.prep_time=1.044, loss.cls_loss=859.4, loss.cls_loss_rt=83.94, loss.loc_loss=5.719, loss.loc_loss_rt=5.828, loss.loc_elem=[0.2944, 0.2367, 1.15, 0.1544, 0.3376, 0.3981, 0.3427], loss.cls_pos_rt=0.294, loss.cls_neg_rt=83.64, loss.dir_rt=0.8462, rpn_acc=0.9887, pr.prec@10=0.0003462, pr.rec@10=0.994, pr.prec@30=0.0002134, pr.rec@30=0.3948, pr.prec@50=0.001358, pr.rec@50=0.04272, pr.prec@70=0.001369, pr.rec@70=0.001361, pr.prec@80=0.00145, pr.rec@80=0.0008163, pr.prec@90=0.002865, pr.rec@90=0.0008163, pr.prec@95=0.003306, pr.rec@95=0.0005442, misc.num_vox=51000, misc.num_pos=11, misc.num_neg=70366, misc.num_anchors=70400, misc.lr=0.0003109, misc.mem_usage=99.1
+runtime.step=100, runtime.steptime=2.16, runtime.voxel_gene_time=0.00874, runtime.prep_time=1.367, loss.cls_loss=500.1, loss.cls_loss_rt=6.373, loss.loc_loss=4.531, loss.loc_loss_rt=4.006, loss.loc_elem=[0.2084, 0.1378, 0.6705, 0.1066, 0.2032, 0.1876, 0.4887], loss.cls_pos_rt=0.6307, loss.cls_neg_rt=5.742, loss.dir_rt=0.6907, rpn_acc=0.9942, pr.prec@10=0.0002997, pr.rec@10=0.9047, pr.prec@30=0.0002102, pr.rec@30=0.2245, pr.prec@50=0.001353, pr.rec@50=0.02391, pr.prec@70=0.001315, pr.rec@70=0.0007614, pr.prec@80=0.001387, pr.rec@80=0.0004568, pr.prec@90=0.00278, pr.rec@90=0.0004568, pr.prec@95=0.003231, pr.rec@95=0.0003046, misc.num_vox=49610, misc.num_pos=25, misc.num_neg=70366, misc.num_anchors=70400, misc.lr=0.0005604, misc.mem_usage=99.2
+runtime.step=150, runtime.steptime=2.216, runtime.voxel_gene_time=0.004379, runtime.prep_time=1.346, loss.cls_loss=337.5, loss.cls_loss_rt=1.12, loss.loc_loss=3.968, loss.loc_loss_rt=1.859, loss.loc_elem=[0.01777, 0.03895, 0.4675, 0.02944, 0.01904, 0.1823, 0.1747], loss.cls_pos_rt=0.2494, loss.cls_neg_rt=0.8709, loss.dir_rt=0.3295, rpn_acc=0.996, pr.prec@10=0.0002874, pr.rec@10=0.6418, pr.prec@30=0.0002102, pr.rec@30=0.1525, pr.prec@50=0.001353, pr.rec@50=0.01624, pr.prec@70=0.001314, pr.rec@70=0.0005173, pr.prec@80=0.001386, pr.rec@80=0.0003104, pr.prec@90=0.00278, pr.rec@90=0.0003104, pr.prec@95=0.003231, pr.rec@95=0.0002069, misc.num_vox=51000, misc.num_pos=0, misc.num_neg=70400, misc.num_anchors=70400, misc.lr=0.0009295, misc.mem_usage=99.4
+runtime.step=200, runtime.steptime=2.183, runtime.voxel_gene_time=0.004261, runtime.prep_time=0.9804, loss.cls_loss=253.4, loss.cls_loss_rt=0.7355, loss.loc_loss=3.716, loss.loc_loss_rt=2.646, loss.loc_elem=[0.04124, 0.07679, 0.6328, 0.0266, 0.06256, 0.1464, 0.3364], loss.cls_pos_rt=0.6469, loss.cls_neg_rt=0.08856, loss.dir_rt=0.4703, rpn_acc=0.997, pr.prec@10=0.0002874, pr.rec@10=0.5005, pr.prec@30=0.0002102, pr.rec@30=0.1189, pr.prec@50=0.001353, pr.rec@50=0.01267, pr.prec@70=0.001314, pr.rec@70=0.0004035, pr.prec@80=0.001386, pr.rec@80=0.0002421, pr.prec@90=0.00278, pr.rec@90=0.0002421, pr.prec@95=0.003231, pr.rec@95=0.0001614, misc.num_vox=42799, misc.num_pos=51, misc.num_neg=70343, misc.num_anchors=70400, misc.lr=0.001353, misc.mem_usage=99.2
+runtime.step=250, runtime.steptime=2.105, runtime.voxel_gene_time=0.01538, runtime.prep_time=1.059, loss.cls_loss=202.9, loss.cls_loss_rt=0.8139, loss.loc_loss=3.588, loss.loc_loss_rt=4.511, loss.loc_elem=[0.07092, 0.2261, 0.8209, 0.06083, 0.4083, 0.3742, 0.2942], loss.cls_pos_rt=0.5878, loss.cls_neg_rt=0.2261, loss.dir_rt=0.3683, rpn_acc=0.9975, pr.prec@10=0.0002874, pr.rec@10=0.3919, pr.prec@30=0.0002102, pr.rec@30=0.09313, pr.prec@50=0.001353, pr.rec@50=0.009919, pr.prec@70=0.001314, pr.rec@70=0.0003159, pr.prec@80=0.001386, pr.rec@80=0.0001895, pr.prec@90=0.00278, pr.rec@90=0.0001895, pr.prec@95=0.003231, pr.rec@95=0.0001264, misc.num_vox=49905, misc.num_pos=8, misc.num_neg=70388, misc.num_anchors=70400, misc.lr=0.001756, misc.mem_usage=99.3
+runtime.step=300, runtime.steptime=2.189, runtime.voxel_gene_time=0.003896, runtime.prep_time=1.33, loss.cls_loss=169.2, loss.cls_loss_rt=0.797, loss.loc_loss=3.443, loss.loc_loss_rt=2.624, loss.loc_elem=[0.07427, 0.07243, 0.7646, 0.06302, 0.0992, 0.08639, 0.1521], loss.cls_pos_rt=0.7392, loss.cls_neg_rt=0.05786, loss.dir_rt=0.6236, rpn_acc=0.9979, pr.prec@10=0.0002874, pr.rec@10=0.3281, pr.prec@30=0.0002102, pr.rec@30=0.07796, pr.prec@50=0.001353, pr.rec@50=0.008304, pr.prec@70=0.001314, pr.rec@70=0.0002645, pr.prec@80=0.001386, pr.rec@80=0.0001587, pr.prec@90=0.00278, pr.rec@90=0.0001587, pr.prec@95=0.003231, pr.rec@95=0.0001058, misc.num_vox=51000, misc.num_pos=28, misc.num_neg=70362, misc.num_anchors=70400, misc.lr=0.002068, misc.mem_usage=99.6
+runtime.step=350, runtime.steptime=2.228, runtime.voxel_gene_time=0.004303, runtime.prep_time=1.116, loss.cls_loss=145.2, loss.cls_loss_rt=0.8011, loss.loc_loss=3.379, loss.loc_loss_rt=2.944, loss.loc_elem=[0.08872, 0.01652, 0.9513, 0.02628, 0.01714, 0.1344, 0.2374], loss.cls_pos_rt=0.6376, loss.cls_neg_rt=0.1635, loss.dir_rt=0.4856, rpn_acc=0.9981, pr.prec@10=0.0002928, pr.rec@10=0.2922, pr.prec@30=0.0002102, pr.rec@30=0.06792, pr.prec@50=0.001353, pr.rec@50=0.007234, pr.prec@70=0.001314, pr.rec@70=0.0002304, pr.prec@80=0.001386, pr.rec@80=0.0001382, pr.prec@90=0.00278, pr.rec@90=0.0001382, pr.prec@95=0.003231, pr.rec@95=9.216e-05, misc.num_vox=51000, misc.num_pos=0, misc.num_neg=70400, misc.num_anchors=70400, misc.lr=0.002232, misc.mem_usage=99.5
+runtime.step=400, runtime.steptime=2.094, runtime.voxel_gene_time=0.006387, runtime.prep_time=1.142, loss.cls_loss=127.2, loss.cls_loss_rt=1.064, loss.loc_loss=3.325, loss.loc_loss_rt=2.266, loss.loc_elem=[0.03037, 0.05145, 0.4904, 0.05796, 0.2005, 0.1175, 0.1848], loss.cls_pos_rt=1.004, loss.cls_neg_rt=0.06058, loss.dir_rt=0.6643, rpn_acc=0.9983, pr.prec@10=0.0002928, pr.rec@10=0.2525, pr.prec@30=0.0002102, pr.rec@30=0.05869, pr.prec@50=0.001353, pr.rec@50=0.006251, pr.prec@70=0.001314, pr.rec@70=0.0001991, pr.prec@80=0.001386, pr.rec@80=0.0001194, pr.prec@90=0.00278, pr.rec@90=0.0001194, pr.prec@95=0.003231, pr.rec@95=7.963e-05, misc.num_vox=51000, misc.num_pos=8, misc.num_neg=70384, misc.num_anchors=70400, misc.lr=0.002236, misc.mem_usage=99.5
+runtime.step=450, runtime.steptime=2.162, runtime.voxel_gene_time=0.004563, runtime.prep_time=1.148, loss.cls_loss=113.1, loss.cls_loss_rt=0.9536, loss.loc_loss=3.288, loss.loc_loss_rt=3.309, loss.loc_elem=[0.06252, 0.04802, 0.7416, 0.08906, 0.129, 0.1363, 0.4477], loss.cls_pos_rt=0.8798, loss.cls_neg_rt=0.07377, loss.dir_rt=0.6702, rpn_acc=0.9985, pr.prec@10=0.0002928, pr.rec@10=0.2203, pr.prec@30=0.0002102, pr.rec@30=0.05119, pr.prec@50=0.001353, pr.rec@50=0.005453, pr.prec@70=0.001314, pr.rec@70=0.0001737, pr.prec@80=0.001386, pr.rec@80=0.0001042, pr.prec@90=0.00278, pr.rec@90=0.0001042, pr.prec@95=0.003231, pr.rec@95=6.946e-05, misc.num_vox=43505, misc.num_pos=30, misc.num_neg=70347, misc.num_anchors=70400, misc.lr=0.002143, misc.mem_usage=98.9
+runtime.step=500, runtime.steptime=2.131, runtime.voxel_gene_time=0.005072, runtime.prep_time=1.095, loss.cls_loss=101.9, loss.cls_loss_rt=0.7507, loss.loc_loss=3.232, loss.loc_loss_rt=3.115, loss.loc_elem=[0.08599, 0.0271, 0.4604, 0.08423, 0.2689, 0.2683, 0.3627], loss.cls_pos_rt=0.4667, loss.cls_neg_rt=0.2841, loss.dir_rt=0.4583, rpn_acc=0.9986, pr.prec@10=0.0002928, pr.rec@10=0.1986, pr.prec@30=0.0002102, pr.rec@30=0.04616, pr.prec@50=0.001353, pr.rec@50=0.004917, pr.prec@70=0.001314, pr.rec@70=0.0001566, pr.prec@80=0.001386, pr.rec@80=9.396e-05, pr.prec@90=0.00278, pr.rec@90=9.396e-05, pr.prec@95=0.003231, pr.rec@95=6.264e-05, misc.num_vox=51000, misc.num_pos=6, misc.num_neg=70394, misc.num_anchors=70400, misc.lr=0.001969, misc.mem_usage=99.1
+runtime.step=550, runtime.steptime=2.116, runtime.voxel_gene_time=0.004561, runtime.prep_time=1.406, loss.cls_loss=92.71, loss.cls_loss_rt=0.7777, loss.loc_loss=3.176, loss.loc_loss_rt=1.799, loss.loc_elem=[0.02883, 0.04442, 0.2009, 0.003619, 0.212, 0.1168, 0.293], loss.cls_pos_rt=0.7143, loss.cls_neg_rt=0.06339, loss.dir_rt=0.4194, rpn_acc=0.9987, pr.prec@10=0.0002928, pr.rec@10=0.1815, pr.prec@30=0.0002102, pr.rec@30=0.04219, pr.prec@50=0.001353, pr.rec@50=0.004493, pr.prec@70=0.001314, pr.rec@70=0.0001431, pr.prec@80=0.001386, pr.rec@80=8.586e-05, pr.prec@90=0.00278, pr.rec@90=8.586e-05, pr.prec@95=0.003231, pr.rec@95=5.724e-05, misc.num_vox=51000, misc.num_pos=18, misc.num_neg=70382, misc.num_anchors=70400, misc.lr=0.001729, misc.mem_usage=99.3
+runtime.step=600, runtime.steptime=2.122, runtime.voxel_gene_time=0.003894, runtime.prep_time=1.2, loss.cls_loss=85.06, loss.cls_loss_rt=0.9413, loss.loc_loss=3.155, loss.loc_loss_rt=5.21, loss.loc_elem=[0.1979, 0.3018, 0.837, 0.1369, 0.4526, 0.2216, 0.4571], loss.cls_pos_rt=0.9008, loss.cls_neg_rt=0.04046, loss.dir_rt=0.8035, rpn_acc=0.9988, pr.prec@10=0.0002928, pr.rec@10=0.1655, pr.prec@30=0.0002102, pr.rec@30=0.03848, pr.prec@50=0.001353, pr.rec@50=0.004098, pr.prec@70=0.001314, pr.rec@70=0.0001305, pr.prec@80=0.001386, pr.rec@80=7.831e-05, pr.prec@90=0.00278, pr.rec@90=7.831e-05, pr.prec@95=0.003231, pr.rec@95=5.221e-05, misc.num_vox=51000, misc.num_pos=4, misc.num_neg=70396, misc.num_anchors=70400, misc.lr=0.001441, misc.mem_usage=99.0
+#################################
+# EVAL
+#################################
+Generate output labels...

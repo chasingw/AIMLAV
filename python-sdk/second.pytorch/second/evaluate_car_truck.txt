@@ -1,0 +1,8 @@
+echo date > time.txt; python ./pytorch/train.py evaluate --config_path=./model_car_40_epochs/pipeline.config --model_dir=model_car_40_epochs --measure_time=True --batch_size=1; echo date >> time.txt; mv time.txt model_car_40_epochs;
+
+echo date > time.txt; python ./pytorch/train.py evaluate --config_path=./model_car_50_epochs/pipeline.config --model_dir=model_car_50_epochs --measure_time=True --batch_size=1; echo date >> time.txt; mv time.txt model_car_50_epochs;
+
+echo date > time.txt; python ./pytorch/train.py evaluate --config_path=./car_model_1_epochs/pipeline.config --model_dir=car_model_1_epochs --measure_time=True --batch_size=1; echo date >> time.txt; mv time.txt car_model_1_epoch;
+
+echo date > time.txt; python ./pytorch/train.py evaluate --config_path=./model_truck_50_epochs/pipeline.config --model_dir=model_truck_50_epochs --measure_time=True --batch_size=1; echo date >> time.txt; mv time.txt model_truck_50_epochs;
+
