@@ -127,7 +127,7 @@ def plot_random_pointclouds(model_path, checkpoint, number_of_pointclouds):
 def plot_single_pointcloud(model_path, ckpt_path, point_cloud_index):
     f, (ax1, ax2) = plt.subplots(1, 2, sharey=False)
     bev_map, info = infer(model_path+'/pipeline.config', ckpt_path, point_cloud_key=point_cloud_index)
-    ax1.imshow(bev_map)
+    ax1.imshow(bev_map, origin='lower')
     img = mpimg.imread(info['cam_front_path'])
     ax2.imshow(img)
     plt.show()
