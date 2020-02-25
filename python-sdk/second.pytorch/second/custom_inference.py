@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 from pathlib import Path
+import random
+import matplotlib.image as mpimg
 
 import torch
 from google.protobuf import text_format
@@ -103,3 +105,29 @@ def infer(config_path, ckpt_path, point_cloud_key):
     pred = detection_v2(anchors, voxels, num_points, coords, net)
     bev_map = visualize(pred, points)
     return bev_map, info
+
+
+def random_pointcloud_ids_list(max = 5):
+    # max: the number of random numbers you want
+    #
+    #
+    # generate :max random numbers in the range of of 0 - 5000
+    random_pointcloud_ids = []
+    for i in range(0, max):
+        random_pointcloud_ids.append(random.randrange(0, 5000)) # find the max id number
+    return random_pointcloud_ids
+
+def plot_random_pointclouds(model_path, checkpoint, number_of_pointclouds):
+    point_cloud_ids = random_pointcloud_ids_list(number_of_pointclouds);
+    # plot the pointcloud and the image side by side
+    for i in point_cloud_ids:
+        plot_single_pointcloud(model_path, ckpt_path, i)
+    return point_cloud_ids
+
+def plot_single_pointcloud(model_path, ckpt_path, point_cloud_index):
+    f, (ax1, ax2) = plt.subplots(1, 2, sharey=False)
+    bev_map, info = infer(model_path+'/pipeline.config', ckpt_path, point_cloud_key=point_cloud_index)
+    ax1.imshow(bev_map)
+    img = mpimg.imread(info['cam_front_path'])
+    ax2.imshow(img)
+    plt.show()
