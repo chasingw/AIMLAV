@@ -1,14 +1,16 @@
 {
   "latest_ckpt": {
-    "voxelnet": "voxelnet-464.tckpt",
-    "adam_optimizer": "adam_optimizer-464.tckpt"
+    "voxelnet": "voxelnet-465.tckpt",
+    "adam_optimizer": "adam_optimizer-465.tckpt"
   },
   "all_ckpts": {
     "voxelnet": [
-      "voxelnet-464.tckpt"
+      "voxelnet-464.tckpt",
+      "voxelnet-465.tckpt"
     ],
     "adam_optimizer": [
-      "adam_optimizer-464.tckpt"
+      "adam_optimizer-464.tckpt",
+      "adam_optimizer-465.tckpt"
     ]
   }
 }

@@ -117,7 +117,7 @@ def random_pointcloud_ids_list(max = 5):
         random_pointcloud_ids.append(random.randrange(0, 5000)) # find the max id number
     return random_pointcloud_ids
 
-def plot_random_pointclouds(model_path, checkpoint, number_of_pointclouds):
+def plot_random_pointclouds(model_path, ckpt_path, number_of_pointclouds):
     point_cloud_ids = random_pointcloud_ids_list(number_of_pointclouds);
     # plot the pointcloud and the image side by side
     for i in point_cloud_ids:
@@ -127,6 +127,7 @@ def plot_random_pointclouds(model_path, checkpoint, number_of_pointclouds):
 def plot_single_pointcloud(model_path, ckpt_path, point_cloud_index):
     f, (ax1, ax2) = plt.subplots(1, 2, sharey=False)
     bev_map, info = infer(model_path+'/pipeline.config', ckpt_path, point_cloud_key=point_cloud_index)
+    # flip the image vertically
     ax1.imshow(bev_map, origin='lower')
     img = mpimg.imread(info['cam_front_path'])
     ax2.imshow(img)
