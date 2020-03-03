@@ -132,3 +132,7 @@ def plot_single_pointcloud(model_path, ckpt_path, point_cloud_index):
     img = mpimg.imread(info['cam_front_path'])
     ax2.imshow(img)
     plt.show()
+    
+def plot_list_of_pointclouds(config_path, ckpt_path, idx_list):
+    for idx in idx_list:
+        plot_single_pointcloud(config_path, ckpt_path, idx)
