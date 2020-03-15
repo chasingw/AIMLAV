@@ -4,3 +4,9 @@
 [submodule "python-sdk/python-sdk/aml/Adversarial-point-perturbations-on-3D-objects"]
 	path = python-sdk/python-sdk/aml/Adversarial-point-perturbations-on-3D-objects
 	url = https://github.com/TangeniThePyGuru/Adversarial-point-perturbations-on-3D-objects.git
+[submodule "python-sdk/aml/Adversarial-point-perturbations-on-3D-objects"]
+	path = python-sdk/aml/Adversarial-point-perturbations-on-3D-objects
+	url = https://github.com/TangeniThePyGuru/Adversarial-point-perturbations-on-3D-objects.git
+[submodule "python-sdk/aml/3d-adv-pc"]
+	path = python-sdk/aml/3d-adv-pc
+	url = https://github.com/TangeniThePyGuru/3d-adv-pc.git
