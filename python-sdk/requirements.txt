@@ -1,0 +1,11 @@
+cachetools
+jupyter
+matplotlib
+numpy
+Pillow
+pyquaternion>=0.9.5
+scikit-learn
+scipy
+Shapely
+tqdm
+descartes
