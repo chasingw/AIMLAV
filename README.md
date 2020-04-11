@@ -3,12 +3,12 @@ This project is based on many other subprojects and uses a project shell/structu
 
 ## Overview
 - [Changelog](#changelog)
-- [Project Description](#project_description)
-- [Project Setup From Scratch](#project_setup_from_scratch)
-- [Cloning The Project](#cloning_the_project)
-- [Running Project From Pre-configured VM](#)
-- [Getting Started](#getting_started)
-- [Download dataset](#dataset_download)
+- [Project Description](#project-description)
+- [Project Setup From Scratch](#project-setup-from_scratch)
+- [Cloning The Project](#cloning-the_project)
+- [Running Project From Pre-configured VM](#running-project-from-pre-configured-vm)
+- [Getting Started](#getting-started)
+- [Download dataset](#dataset-download)
 
 
 ## Changelog
@@ -145,6 +145,8 @@ Follow the the elegant usage instructions from the [github pointnet repository](
 
 - Install requirements
 `$ pip install -r requirements.txt`
+
+## Running Project From Pre-configured VM
 
 
 ## Getting started
