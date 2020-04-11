@@ -3,12 +3,12 @@ This project is based on many other subprojects and uses a project shell/structu
 
 ## Overview
 - [Changelog](#changelog)
-- [Project Description](#project description)
-- [Project Setup From Scratch](#project setup from scratch)
-- [Cloning The Project](#cloning the project)
+- [Project Description](#project_description)
+- [Project Setup From Scratch](#project_setup_from_scratch)
+- [Cloning The Project](#cloning_the_project)
 - [Running Project From Pre-configured VM](#)
-- [Getting Started](#getting started)
-- [Download dataset](#dataset download)
+- [Getting Started](#getting_started)
+- [Download dataset](#dataset_download)
 
 
 ## Changelog
@@ -83,6 +83,7 @@ $ conda install scikit-image scipy numba pillow matplotlib
 `$ pip install -r requirements`
 
 - Clone and install the spconv repository (https://github.com/traveller59/spconv)
+
 `$ git clone https://github.com/traveller59/spconv.git --recursive`
 `$ sudo apt-get install libboost-all-dev`
 
@@ -111,8 +112,11 @@ Install the generated <something>.whl file
 - Create a separate environment for this project it makes use of python 2.7
 
 `$ conda create -n pnet python=2.7`
+
 `$ conda activate pnet`
+
 `$ pip install requirements.txt`
+
 `$ sudo apt-get install libhdf5-dev`
 
 Follow the the elegant usage instructions from the [github pointnet repository](https://github.com/TangeniThePyGuru/pointnet)
@@ -127,7 +131,9 @@ Follow the the elegant usage instructions from the [github pointnet repository](
 - Install Anaconda
 
 `$ mkdir ~/temp && cd ~/temp`
+
 `$ wget https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh`
+
 `$ ./Anaconda3-2020.02-Linux-x86_64.sh`
 
 - Create virtual environment
