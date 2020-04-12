@@ -235,7 +235,7 @@ Please unpack the archives to the `data/sets/nuscenes` folder \*without\* overwr
 Eventually you should have the following folder structure:
 ```
 /data/sets/nuscenes
-    gt_database
+    gt_database-ground_truth data (raw data for annotations)
     samples	-	Sensor data for keyframes.
     sweeps	-	Sensor data for intermediate frames.
     maps	-	Folder for all map files: rasterized .png images and vectorized .json files.
