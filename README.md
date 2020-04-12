@@ -146,8 +146,51 @@ Follow the the elegant usage instructions from the [github pointnet repository](
 - Install requirements
 `$ pip install -r requirements.txt`
 
-## Running Project From Pre-configured VM
+## Running Project From Pre-configured VM 
 
+***(For security purposes this instructions never go public when this repo goes public)***
+
+***Assuming that you have VPN access to the subnet where the VM is located***
+
+1. Start the Jupyter Server if it has not started already (**take note of any open terminals with services running**)
+
+Open the actual Ubuntu VM make sure that you start the Jupyter server in the right directory using the command below:
+
+`$ cd /media/research/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk`
+
+***This is were all the project development is taking place most of the time***
+
+`$ conda activate`
+
+- Start the Jupyter Server
+
+`$ jupyter notebook --no-browser`
+
+** *‘--no-browser’ flag simply means we don’t want a browser page to open up after starting the server* **
+
+2. SSH tunnel into the Jupyter Server from your Computer
+
+- You need to connect to a jupyter server running on the VM via SSH tunnelling, open up a terminal on your local machine and run the following command (take note the IP address below can change, let's assume it has not changed for now).
+
+`$ ssh -N -f -L 8889:localhost:8888 research@10.5.128.17`
+
+- As for MAC OSX, use the following command to SSH tunnel to prevent the common error “broken pipe”, the article [here](http://www.yellow-bricks.com/2018/11/26/ssh-broken-pipe-osx/) explains it very well if you’d like to read more about it.
+ 
+`$ ssh -o -IPQoS=throughput -N -f -L 8889:localhost:8888 research@10.5.128.17`
+
+- After the command above you should be able to connect to a *Jupyter Server/Environment* from your browser by simply typing the following link:
+
+*http://localhost:8889*
+
+- When prompted for a password use the password below:
+
+*Way$ToGo2022*
+	
+**Take note you do not need to make any configurations unless introducing something new**
+
+- The Jupyter Environment gives you the ability to open instances to your local terminal from the browser in case you need to execute any script from a terminal. 
+
+- Otherwise if you are not comfortable with the Jupyter Environment you can always log into the actual machine by connecting to the VM directly via VMWare Workstation. Click [HERE](https://docs.google.com/document/d/13-j_JXBM0jagUzOZhlwAgfshlbX8O65PXvIZHe99ohQ/edit?usp=sharing) for steps on how to do the above.
 
 ## Getting started
 
