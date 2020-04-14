@@ -36,7 +36,7 @@ This project is based on many other subprojects and uses a project shell/structu
     - Pointnet is an algorithm for deep learning specifically on Point Sets for 3D Classification and Segmentation
     - Read more [HERE](https://github.com/charlesq34/pointnet)
 
-- When you configure this project I advise that you set it up on an Ubuntu 16.04 / 18.04 machine as I have tested the project on this platform. I have also tried to configure this project on a Jetson Xavier with Ubuntu 18.04 device however it was a hassle to get some of the packages to work, and some packages just never got to work at all namely tensorflow which is a requirement for Pointnet subproject. The Jetson Javier has been known to have a different CPU architecture and therefore works differently in many ways. 
+> **When you configure this project I advise that you set it up on an Ubuntu 16.04 / 18.04 machine as I have tested the project on this platform. I have also tried to configure this project on a Jetson Xavier with Ubuntu 18.04 device however it was a hassle to get some of the packages to work, and some packages just never got to work at all namely tensorflow which is a requirement for Pointnet subproject. The Jetson Javier has been known to have a different CPU architecture and therefore works differently in many ways.** 
 
 
 ## Project Setup from Scratch
