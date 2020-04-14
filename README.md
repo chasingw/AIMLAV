@@ -61,7 +61,17 @@ The data/ directory houses everything to do with the dataset for the project, ho
 Nuscenes works with python 3.7 and 3.6, but I advise you use 3.7 since I have experience in using this version as well.
 Create project environment
 
+- Install Anaconda
+
+`$ mkdir ~/temp && cd ~/temp`
+
+`$ wget https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh`
+
+`$ ./Anaconda3-2020.02-Linux-x86_64.sh`
+
 `$ conda create -n nuscenes python=3.7`
+
+- Install project dependencies
 
 `$ pip install -r python-sdk/requirements.txt`
 
