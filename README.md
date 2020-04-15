@@ -83,11 +83,28 @@ Create project environment
 
 `$ pip install -r python-sdk/requirements.txt`
 
-To setup nuscenes refer to the well documented [nuscenes-devkit github repository](https://github.com/nutonomy/nuscenes-devkit)
+- Paste the following two scripts to the ~/.bashrc file 
+
+```
+export NUSCENES="data/sets/nuscenes"
+export PYTHONPATH="${PYTHONPATH}:/media/$USER/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk"
+```
+> The first line creates a ***nucenes environement variable*** which us used to access the dataset.
+> The second line allows you to access python packages withing the ***python-sdk/*** directory, please take note of the path. This is where my project has been installed under the ***/media/$USER*** directory, so you should take note of where you install you project and change this accordingly.
+
+- Open the file with nano and paste the code above
+
+`$ sudo nano ~/.bashrc`
 
 #### Download dataset
 
 - To download the dataset refer the the [last section](dataset-download)
+
+#### Test Nuscenes Project
+
+- Run test under the ***python-sdk/*** directory to confirm that there is not missing information.
+
+`$ python -m unittest`
 
 ### SECOND setup
 
@@ -103,21 +120,23 @@ To setup nuscenes refer to the well documented [nuscenes-devkit github repositor
 
 - Install required packages from the requirements.txt file:
 
-`$ pip install -r requirements`
-
-- Clone and install the spconv repository (https://github.com/traveller59/spconv)
-
-`$ git clone https://github.com/traveller59/spconv.git --recursive`
+`$ pip install -r requirements.txt`
 
 `$ sudo apt-get install libboost-all-dev`
 
 - Download and install cmake click [HERE](https://drive.google.com/open?id=1aYg3TvMIkIZsvbXWUkqAqc0hjOvS-PXfNaX0W__Ffsg) for steps on how to do this.
 
+- Clone and install the [spconv](https://github.com/traveller59/spconv) dependency 
+
+`$ mkdir ~/temp && cd ~/temp`
+
+`$ git clone https://github.com/traveller59/spconv.git --recursive`
+
 - Create a <something>.whl file to install this package
 
 `$ python setup.py bdist_wheel`
 
-Install the generated <something>.whl file
+- Install the generated <something>.whl file
 
 `$ cd ./dist`
 
@@ -155,13 +174,14 @@ Install the generated <something>.whl file
 Follow the the elegant usage instructions from the [github pointnet repository](https://github.com/TangeniThePyGuru/pointnet)
 
 
-## Cloning the project
+## Cloning the project (Incomplete)
+***THIS SECTION IS INDEPENDENT OF THE PREVIOUS SECTIONS***
 
 - Clone the project make sure to add the --recursive flag to include all the required subprojects
 
 `$ git clone https://github.com/samtout/AIMLAV.git --recursive`
 
-- Install Anaconda
+- If you did not install Anaconda already go ahead and install it, else [start continue here](create-virtual-environment).
 
 `$ mkdir ~/temp && cd ~/temp`
 
@@ -169,7 +189,7 @@ Follow the the elegant usage instructions from the [github pointnet repository](
 
 `$ ./Anaconda3-2020.02-Linux-x86_64.sh`
 
-- Create virtual environment
+##### Create virtual environment
 
 `$ conda create -n p37 python=3.7`
 
@@ -181,7 +201,14 @@ Follow the the elegant usage instructions from the [github pointnet repository](
 
 `$ pip install -r requirements.txt`
 
+#### Test Nuscenes Project
+
+- Run test under the ***python-sdk/*** directory to confirm that there is not missing information.
+
+`$ python -m unittest`
+
 ## Running Project From Pre-configured VM 
+***THIS SECTION IS INDEPENDENT OF THE PREVIOUS SECTIONS***
 
 ***(For security purposes this instructions never go public when this repo goes public)***
 
