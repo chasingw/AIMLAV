@@ -4,19 +4,20 @@ This project is based on many other subprojects and uses a project shell/structu
 ## Overview
 - [Changelog](#changelog)
 - [Project Description](#project-description)
-- [Project Setup From Scratch](#project-setup-from_scratch)
-- [Cloning The Project](#cloning-the_project)
-- [Running Project From Pre-configured VM](#running-project-from-pre-configured-vm)
+- [Project Setup From Scratch (independent)](#project-setup-from_scratch)
+- [Cloning The Project (independent)](#cloning-the_project)
+- [Running Project From Pre-configured VM (independent)](#running-project-from-pre-configured-vm)
 - [Getting Started](#getting-started)
 - [Download dataset](#dataset-download)
 
+> Take note of the sections above labled ***(independent)***, this simply means this section does not depend on previous sections. In other words  depending on how you'd like to have this project setup from the three alternatives above, you should only pick one of the three before you jump over to ***[Getting Started](#getting-started)***
 
 ## Changelog
 - April. 11, 2018: Devkit initial setup.
 
 
 ## Project Description
-- This project was actually to use the nuscenes dataset to train an object recognition model on point clouds and experiment with how adversarial attacks on point clouds can affect the quality of autonomous vehicles if not handled accordingly.
+- This project was actually to use the nuscenes dataset to train an ***object recognition model on point clouds*** and experiment with how adversarial attacks on point clouds can affect the quality of autonomous vehicles if not handled accordingly.
 
 - This project consists of 4 subprojects:
 
@@ -36,7 +37,7 @@ This project is based on many other subprojects and uses a project shell/structu
     - Pointnet is an algorithm for deep learning specifically on Point Sets for 3D Classification and Segmentation
     - Read more [HERE](https://github.com/charlesq34/pointnet)
 
-> **When you configure this project I advise that you set it up on an Ubuntu 16.04 / 18.04 machine as I have tested the project on this platform. I have also tried to configure this project on a Jetson Xavier with Ubuntu 18.04 device however it was a hassle to get some of the packages to work, and some packages just never got to work at all namely tensorflow which is a requirement for Pointnet subproject. The Jetson Javier has been known to have a different CPU architecture and therefore works differently in many ways.** 
+> *When you configure this project I advise that you set it up on an **Ubuntu 16.04 / 18.04 machine** as I have tested the project on this platform. I have also tried to configure this project on a **Jetson Xavier** with Ubuntu 18.04 device however it was a hassle to get some of the packages to work, and some packages just never got to work at all namely tensorflow which is a requirement for the Pointnet subproject. The Jetson Javier has been known to have a different CPU architecture and therefore works differently in many ways.*
 
 
 ## Project Setup from Scratch
@@ -52,26 +53,33 @@ python-sdk/
 		/sets/nuscenes
 	/second.pytorch
 	/nuscenes
-
-The data/ directory houses everything to do with the dataset for the project, however take note some of the subprojects here might have thier own datasets.
 ```
+
+The **data/** directory contains everything to do with the dataset for the project, however take note some of the subprojects here might have thier own datasets.
+
 
 ### Nuscenes-devkit setup
 
 Nuscenes works with python 3.7 and 3.6, but I advise you use 3.7 since I have experience in using this version as well.
 Create project environment
 
-- Install Anaconda
+#### Install Anaconda
 
 `$ mkdir ~/temp && cd ~/temp`
 
+- The two commands below do the same thing which is to download Anaconda, you can use either whichever works for you.
+
 `$ wget https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh`
+
+`$ curl -O https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh`
+
+- Execute downloaded Anaconda script
 
 `$ ./Anaconda3-2020.02-Linux-x86_64.sh`
 
 `$ conda create -n nuscenes python=3.7`
 
-- Install project dependencies
+#### Install project dependencies
 
 `$ pip install -r python-sdk/requirements.txt`
 
@@ -80,13 +88,15 @@ To setup nuscenes refer to the well documented [nuscenes-devkit github repositor
 
 ### SECOND setup
 
-Make use of the already existing environment nuscenes (we created this above) 
+***Make use of the already existing environment nuscenes (we created this above)***
 
-$ conda activate nuscenes
+- Activates a conda environment named *nuscenes*
 
-- Install dependencies
+`$ conda activate nuscenes`
 
-$ conda install scikit-image scipy numba pillow matplotlib
+- Install dependencies into this environment
+
+`$ conda install scikit-image scipy numba pillow matplotlib`
 
 - Install required packages from the requirements.txt file:
 
@@ -95,31 +105,41 @@ $ conda install scikit-image scipy numba pillow matplotlib
 - Clone and install the spconv repository (https://github.com/traveller59/spconv)
 
 `$ git clone https://github.com/traveller59/spconv.git --recursive`
+
 `$ sudo apt-get install libboost-all-dev`
 
-- Download and install cmake click [HERE](https://drive.google.com/open?id=1aYg3TvMIkIZsvbXWUkqAqc0hjOvS-PXfNaX0W__Ffsg) for steps on how to do this
+- Download and install cmake click [HERE](https://drive.google.com/open?id=1aYg3TvMIkIZsvbXWUkqAqc0hjOvS-PXfNaX0W__Ffsg) for steps on how to do this.
 
-Create a <something>.whl file to install this package
+- Create a <something>.whl file to install this package
 
 `$ python setup.py bdist_wheel`
 
 Install the generated <something>.whl file
 
 `$ cd ./dist`
+
 `$ pip install <something>.whl`
 
 ### Adversarial point perturbations on 3D objects setup
 
-- When running scripts or notebooks that execute code from this project please use python 2.7, there you should create a new python2.7 environment for this project and install it’s packages from the requirements.txt file.
+***When running scripts or notebooks that execute code from this project please use python 2.7, there you should create a new python2.7 environment for this project and install it’s packages from the requirements.txt file.***
+
+- Clone project
+
+`git clone https://github.com/TangeniThePyGuru/Adversarial-point-perturbations-on-3D-objects.git`
+
+- Create a new python2.7 environment for this subproject and install dependencies
 
 `$ conda create -n app3d python=2.7`
+
 `$ conda activate app3d`
+
 `$ pip install -r requirements.txt`
 
 
 ### Pointnet setup
 
-- Create a separate environment for this project it makes use of python 2.7
+- Create a separate environment for this project, it makes use of python 2.7 and install dependencies. This project has different versions of the same dependencies in other virtual environments that's we need to create a new environment for it. 
 
 `$ conda create -n pnet python=2.7`
 
