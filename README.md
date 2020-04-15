@@ -85,6 +85,9 @@ Create project environment
 
 To setup nuscenes refer to the well documented [nuscenes-devkit github repository](https://github.com/nutonomy/nuscenes-devkit)
 
+#### Download dataset
+
+- To download the dataset refer the the [last section](dataset-download)
 
 ### SECOND setup
 
@@ -171,9 +174,11 @@ Follow the the elegant usage instructions from the [github pointnet repository](
 `$ conda create -n p37 python=3.7`
 
 - Activate Environment
+
 `$ conda activate p37`
 
 - Install requirements
+
 `$ pip install -r requirements.txt`
 
 ## Running Project From Pre-configured VM 
@@ -257,11 +262,12 @@ Pointnet used a modelnet40 dataset located in the *aml/pointnet/data* directory 
 
 
 ## Dataset download
+
 To download nuScenes you need to go to the [Download page](https://www.nuscenes.org/download), 
 create an account and agree to the nuScenes [Terms of Use](https://www.nuscenes.org/terms-of-use).
 After logging in you will see multiple archives. 
-For the devkit to work you will need to download *all* archives.
-Please unpack the archives to the `data/sets/nuscenes` folder \*without\* overwriting folders that occur in multiple archives.
+For the devkit to work you will need to download *all* archives. but for this project you can download the **mini dataset** to work with
+Please unpack/unzip the archives to the `data/sets/nuscenes` folder \*without\* overwriting folders that occur in multiple archives.
 Eventually you should have the following folder structure:
 ```
 /data/sets/nuscenes
