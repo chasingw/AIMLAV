@@ -8,7 +8,6 @@ This project is based on many other subprojects and uses a project shell/structu
 - [Running Project From Pre-configured VM](#running-project-from-pre-configured-vm)
 - [Getting Started](#getting-started)
 
-> Take note of the sections above labled ***(independent)***, this simply means this section does not depend on previous sections. In other words  depending on how you'd like to have this project setup from the three alternatives above, you should only pick one of the three before you jump over to ***[Getting Started](#getting-started)***
 
 ## Changelog
 - April. 11, 2018: Devkit initial setup.
