@@ -152,9 +152,9 @@ If you want to use another folder, specify the `dataroot` parameter of the NuSce
 
 `$ conda install scikit-image scipy numba pillow matplotlib`
 
-- Install required packages from the requirements.txt file:
+- Install required packages from the second.pytorch/requirements.txt file:
 
-`$ pip install -r requirements.txt`
+`$ pip install -r second.pytorch/requirements.txt`
 
 `$ sudo apt-get install libboost-all-dev`
 
@@ -194,7 +194,7 @@ If you want to use another folder, specify the `dataroot` parameter of the NuSce
 
 `$ conda activate app3d`
 
-`$ pip install -r requirements.txt`
+`$ pip install -r aml/Adversarial-point-perturbations-on-3D-objects/requirements.txt`
 
 
 ### Pointnet setup
@@ -207,7 +207,7 @@ If you want to use another folder, specify the `dataroot` parameter of the NuSce
 
 - Install required dependencies
 
-`$ pip install requirements.txt`
+`$ pip install aml/pointnet/requirements.txt`
 
 `$ sudo apt-get install libhdf5-dev`
 
