@@ -142,6 +142,14 @@ export PYTHONPATH="${PYTHONPATH}:/media/$USER/AV_DATA/Nuscenes/nuscenes-devkit/p
 
 `$ pip install <something>.whl`
 
+- Add the following script to the bottom of ***~/.bashrc*** file, it allows SECOND to reference our ***nuscenes dataset***.
+***Take note of the path below, make sure to use your own full path where you have installed the project, mine is under /media/$USER/***
+
+`export NUSCENES_TRAINVAL_DATASET_ROOT="/media/$USER/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes"`
+
+`$ sudo nano ~/.bashrc`
+
+
 ### Adversarial point perturbations on 3D objects setup
 
 ***When running scripts or notebooks that execute code from this project please use python 2.7, there you should create a new python2.7 environment for this project and install it’s packages from the requirements.txt file.***
