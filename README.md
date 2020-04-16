@@ -4,11 +4,9 @@ This project is based on many other subprojects and uses a project shell/structu
 ## Overview
 - [Changelog](#changelog)
 - [Project Description](#project-description)
-- [Project Setup From Scratch (independent)](#project-setup-from_scratch)
-- [Cloning The Project (independent)](#cloning-the_project)
-- [Running Project From Pre-configured VM (independent)](#running-project-from-pre-configured-vm)
+- [Project Configuration](#project-configuration)
+- [Running Project From Pre-configured VM](#running-project-from-pre-configured-vm)
 - [Getting Started](#getting-started)
-- [Download dataset](#dataset-download)
 
 > Take note of the sections above labled ***(independent)***, this simply means this section does not depend on previous sections. In other words  depending on how you'd like to have this project setup from the three alternatives above, you should only pick one of the three before you jump over to ***[Getting Started](#getting-started)***
 
@@ -57,6 +55,13 @@ python-sdk/
 
 The **data/** directory contains everything to do with the dataset for the project, however take note some of the subprojects here might have thier own datasets.
 
+- Clone the project make sure to add the --recursive flag to include all the required subprojects
+
+`$ mkdir /media/$USER/AV_DATA && cd /media/$USER/AV_DATA && git clone https://github.com/samtout/AIMLAV.git --recursive`
+
+- cd into the ***python-sdk*** directory
+
+`$ cd AIMLAV/python-sdk`
 
 ### Nuscenes-devkit setup
 
@@ -64,6 +69,10 @@ Nuscenes works with python 3.7 and 3.6, but I advise you use 3.7 since I have ex
 Create project environment
 
 #### Install Anaconda
+
+`$ mkdir ~/temp && cd ~/temp`
+
+- If you did not install Anaconda already go ahead and install it, else [continue here](create-virtual-environment).
 
 `$ mkdir ~/temp && cd ~/temp`
 
@@ -77,17 +86,27 @@ Create project environment
 
 `$ ./Anaconda3-2020.02-Linux-x86_64.sh`
 
-`$ conda create -n nuscenes python=3.7`
+##### Create virtual environment
+
+`$ conda create -n p37 python=3.7`
+
+- Activate Environment
+
+`$ conda activate p37`
+
+- Install requirements
+
+`$ pip install -r requirements.txt`
 
 #### Install project dependencies
 
 `$ pip install -r python-sdk/requirements.txt`
 
-- Paste the following two scripts to the ~/.bashrc file 
+- Paste the following two scripts to the ***~/.bashrc*** file 
 
 ```
 export NUSCENES="data/sets/nuscenes"
-export PYTHONPATH="${PYTHONPATH}:/media/$USER/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk"
+export PYTHONPATH="${PYTHONPATH}:/media/$USER/AV_DATA/AIMLAV/nuscenes-devkit/python-sdk"
 ```
 > The first line creates a ***nucenes environement variable*** which us used to access the dataset.
 > The second line allows you to access python packages withing the ***python-sdk/*** directory, please take note of the path. This is where my project has been installed under the ***/media/$USER*** directory, so you should take note of where you install you project and change this accordingly.
@@ -98,7 +117,23 @@ export PYTHONPATH="${PYTHONPATH}:/media/$USER/AV_DATA/Nuscenes/nuscenes-devkit/p
 
 #### Download dataset
 
-- To download the dataset refer the the [last section](dataset-download)
+To download nuScenes you need to go to the [Download page](https://www.nuscenes.org/download), 
+create an account and agree to the nuScenes [Terms of Use](https://www.nuscenes.org/terms-of-use).
+After logging in you will see multiple archives. 
+For the devkit to work you will need to download *all* archives. but for this project you can download the **mini dataset** to work with
+Please unpack/unzip the archives to the `data/sets/nuscenes` folder \*without\* overwriting folders that occur in multiple archives.
+Eventually you should have the following folder structure:
+
+```
+data/sets/nuscenes
+    gt_database	-	ground_truth data (raw data for annotations)
+    samples	-	Sensor data for keyframes.
+    sweeps	-	Sensor data for intermediate frames.
+    maps	-	Folder for all map files: rasterized .png images and vectorized .json files.
+    v1.0-*	-	JSON tables that include all the meta data and annotations. Each split (trainval, test, mini) is provided in a separate folder.
+```
+If you want to use another folder, specify the `dataroot` parameter of the NuScenes class (see tutorial).
+
 
 #### Test Nuscenes Project
 
@@ -145,7 +180,7 @@ export PYTHONPATH="${PYTHONPATH}:/media/$USER/AV_DATA/Nuscenes/nuscenes-devkit/p
 - Add the following script to the bottom of ***~/.bashrc*** file, it allows SECOND to reference our ***nuscenes dataset***.
 ***Take note of the path below, make sure to use your own full path where you have installed the project, mine is under /media/$USER/***
 
-`export NUSCENES_TRAINVAL_DATASET_ROOT="/media/$USER/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk/data/sets/nuscenes"`
+`export NUSCENES_TRAINVAL_DATASET_ROOT="/media/$USER/AV_DATA/AIMLAV/nuscenes-devkit/python-sdk/data/sets/nuscenes"`
 
 `$ sudo nano ~/.bashrc`
 
@@ -153,10 +188,6 @@ export PYTHONPATH="${PYTHONPATH}:/media/$USER/AV_DATA/Nuscenes/nuscenes-devkit/p
 ### Adversarial point perturbations on 3D objects setup
 
 ***When running scripts or notebooks that execute code from this project please use python 2.7, there you should create a new python2.7 environment for this project and install it’s packages from the requirements.txt file.***
-
-- Clone project
-
-`git clone https://github.com/TangeniThePyGuru/Adversarial-point-perturbations-on-3D-objects.git`
 
 - Create a new python2.7 environment for this subproject and install dependencies
 
@@ -175,47 +206,18 @@ export PYTHONPATH="${PYTHONPATH}:/media/$USER/AV_DATA/Nuscenes/nuscenes-devkit/p
 
 `$ conda activate pnet`
 
+- Install required dependencies
+
 `$ pip install requirements.txt`
 
 `$ sudo apt-get install libhdf5-dev`
 
-Follow the the elegant usage instructions from the [github pointnet repository](https://github.com/TangeniThePyGuru/pointnet)
+You can follow the the elegant usage instructions from the [github pointnet repository](https://github.com/TangeniThePyGuru/pointnet)
 
-
-## Cloning the project (Incomplete)
-***THIS SECTION IS INDEPENDENT OF THE PREVIOUS SECTIONS***
-
-- Clone the project make sure to add the --recursive flag to include all the required subprojects
-
-`$ git clone https://github.com/samtout/AIMLAV.git --recursive`
-
-- If you did not install Anaconda already go ahead and install it, else [start continue here](create-virtual-environment).
-
-`$ mkdir ~/temp && cd ~/temp`
-
-`$ wget https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh`
-
-`$ ./Anaconda3-2020.02-Linux-x86_64.sh`
-
-##### Create virtual environment
-
-`$ conda create -n p37 python=3.7`
-
-- Activate Environment
-
-`$ conda activate p37`
-
-- Install requirements
-
-`$ pip install -r requirements.txt`
-
-#### Test Nuscenes Project
-
-- Run test under the ***python-sdk/*** directory to confirm that there is not missing information.
-
-`$ python -m unittest`
+***After setting up the project, you should skip the next section and head over to the [Getting Started](getting-started) section***
 
 ## Running Project From Pre-configured VM 
+
 ***THIS SECTION IS INDEPENDENT OF THE PREVIOUS SECTIONS***
 
 ***(For security purposes this instructions never go public when this repo goes public)***
@@ -228,7 +230,7 @@ Open the actual Ubuntu VM make sure that you start the Jupyter server in the rig
 
 `$ cd /media/research/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk`
 
-***This is were all the project development is taking place most of the time***
+***This is were all the project development is taking place***
 
 `$ conda activate`
 
@@ -295,24 +297,6 @@ Pointnet used a modelnet40 dataset located in the *aml/pointnet/data* directory 
            gave created a notebook *AML_notebook.ipynb* to help us visualise these
            perturbed  objects. See examples in the notebook.
 
-
-## Dataset download
-
-To download nuScenes you need to go to the [Download page](https://www.nuscenes.org/download), 
-create an account and agree to the nuScenes [Terms of Use](https://www.nuscenes.org/terms-of-use).
-After logging in you will see multiple archives. 
-For the devkit to work you will need to download *all* archives. but for this project you can download the **mini dataset** to work with
-Please unpack/unzip the archives to the `data/sets/nuscenes` folder \*without\* overwriting folders that occur in multiple archives.
-Eventually you should have the following folder structure:
-```
-/data/sets/nuscenes
-    gt_database	-	ground_truth data (raw data for annotations)
-    samples	-	Sensor data for keyframes.
-    sweeps	-	Sensor data for intermediate frames.
-    maps	-	Folder for all map files: rasterized .png images and vectorized .json files.
-    v1.0-*	-	JSON tables that include all the meta data and annotations. Each split (trainval, test, mini) is provided in a separate folder.
-```
-If you want to use another folder, specify the `dataroot` parameter of the NuScenes class (see tutorial).
 
 ## TODO
 
