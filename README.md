@@ -56,11 +56,11 @@ The **data/** directory contains everything to do with the dataset for the proje
 
 - Clone the project make sure to add the --recursive flag to include all the required subprojects
 
-`$ mkdir /media/$USER/AV_DATA && cd /media/$USER/AV_DATA && git clone https://github.com/samtout/AIMLAV.git --recursive`
+`$ cd ~/ && git clone https://github.com/samtout/AIMLAV.git --recursive`
 
 - cd into the ***python-sdk*** directory
 
-`$ cd AIMLAV/python-sdk`
+`$ cd AIMLAV/nuscenes-devkit/python-sdk`
 
 ### Nuscenes-devkit setup
 
@@ -68,8 +68,6 @@ Nuscenes works with python 3.7 and 3.6, but I advise you use 3.7 since I have ex
 Create project environment
 
 #### Install Anaconda
-
-`$ mkdir ~/temp && cd ~/temp`
 
 - If you did not install Anaconda already go ahead and install it, else [continue here](#create-virtual-environment).
 
@@ -89,13 +87,14 @@ Create project environment
 
 `$ ./Anaconda3-2020.02-Linux-x86_64.sh`
 
-- Close your current terminal and reopen again, if anaconda has no been added to *path* please add it by adding the following line to you **~/.bashrc** file.
+- After installation close your current terminal and reopen it again, if anaconda has no been added to *path* please add it by adding the following line to you **~/.bashrc** file.
 
 `export PATH=~/anaconda3/bin:$PATH`
 
 - Persist the changes you made to the **~/.bashrc** file
 
 `$ source ~/.bashrc`
+
 
 ##### Create virtual environment
 
@@ -119,7 +118,7 @@ Create project environment
 
 ```
 export NUSCENES="data/sets/nuscenes"
-export PYTHONPATH="${PYTHONPATH}:/media/$USER/AV_DATA/AIMLAV/nuscenes-devkit/python-sdk"
+export PYTHONPATH="${PYTHONPATH}:~/AIMLAV/nuscenes-devkit/python-sdk"
 ```
 > The first line creates a ***nucenes environement variable*** which us used to access the dataset.
 > The second line allows you to access python packages withing the ***python-sdk/*** directory, please take note of the path. This is where my project has been installed under the ***/media/$USER*** directory, so you should take note of where you install you project and change this accordingly.
@@ -201,9 +200,9 @@ export NUMBA_LIBDEVICE=/usr/local/cuda/nvvm/libdevice
 `$ pip install <something>.whl`
 
 - Add the following script to the bottom of ***~/.bashrc*** file, it allows SECOND to reference our ***nuscenes dataset***.
-***Take note of the path below, make sure to use your own full path where you have installed the project, mine is under /media/$USER/***
+***Take note of the path below, make sure to use your own full path where you have installed the project, mine is under /home/$USER or simply ~/***
 
-`export NUSCENES_TRAINVAL_DATASET_ROOT="/media/$USER/AV_DATA/AIMLAV/nuscenes-devkit/python-sdk/data/sets/nuscenes"`
+`export NUSCENES_TRAINVAL_DATASET_ROOT="~/AIMLAV/nuscenes-devkit/python-sdk/data/sets/nuscenes"`
 
 `$ sudo nano ~/.bashrc`
 
@@ -237,7 +236,7 @@ export NUMBA_LIBDEVICE=/usr/local/cuda/nvvm/libdevice
 
 You can follow the the elegant usage instructions from the [github pointnet repository](https://github.com/TangeniThePyGuru/pointnet)
 
-***After setting up the project, you should skip the next section and head over to the [Getting Started](getting-started) section***
+***After setting up the project, you should skip the next section and head over to the [Getting Started](#getting-started) section***
 
 ## Running Project From Pre-configured VM 
 
