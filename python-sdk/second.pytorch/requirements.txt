@@ -1,0 +1,7 @@
+pytorch
+fire
+tensorboardX
+protobuf
+opencv-python
+scikit-image
+numba
