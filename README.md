@@ -42,7 +42,7 @@ This project is based on many other subprojects and uses a project shell/structu
 
 Project Directory structure
 ```
-python-sdk/
+nuscenes-devkit/python-sdk/
 	/aml
 		/Adversarial-point-pertubations-on-3D-objects
 		/pointnet
@@ -64,42 +64,56 @@ The **data/** directory contains everything to do with the dataset for the proje
 
 ### Nuscenes-devkit setup
 
-Nuscenes works with python 3.7 and 3.6, but I advise you use 3.7 since I have experience in using this version as well.
+Nuscenes works with python 3.7 and 3.6, but I advise you use 3.7 since I have experienced using this version as well.
 Create project environment
 
 #### Install Anaconda
 
 `$ mkdir ~/temp && cd ~/temp`
 
-- If you did not install Anaconda already go ahead and install it, else [continue here](create-virtual-environment).
+- If you did not install Anaconda already go ahead and install it, else [continue here](#create-virtual-environment).
 
 `$ mkdir ~/temp && cd ~/temp`
 
-- The two commands below do the same thing which is to download Anaconda, you can use either whichever works for you.
+- The two commands below do the same thing which is to download Anaconda, you can use whichever works for you.
 
 `$ wget https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh`
 
 `$ curl -O https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh`
 
-- Execute downloaded Anaconda script
+- Give the current user execution permissions to the executable file
+
+`$ chmod u+x Anaconda3-2020.02-Linux-x86_64.sh`
+
+- Execute downloaded Anaconda script (follow instructions), when prompted **Do you wish the installer to initialize Anaconda3?** say yes.
 
 `$ ./Anaconda3-2020.02-Linux-x86_64.sh`
 
+- Close your current terminal and reopen again, if anaconda has no been added to *path* please add it by adding the following line to you **~/.bashrc** file.
+
+`export PATH=~/anaconda3/bin:$PATH`
+
+- Persist the changes you made to the **~/.bashrc** file
+
+`$ source ~/.bashrc`
+
 ##### Create virtual environment
 
-`$ conda create -n p37 python=3.7`
+`$ conda create -n nuscenes python=3.7`
 
 - Activate Environment
 
-`$ conda activate p37`
+`$ conda activate nuscnes`
 
 - Install requirements
 
 `$ pip install -r requirements.txt`
 
-#### Install project dependencies
+- if you have issues installing opencv with the script above you can remove it from the requirements.txt file and install it via the conda package manager.
 
-`$ pip install -r python-sdk/requirements.txt`
+`$ conda install opencv-python`
+
+#### Install project dependencies
 
 - Paste the following two scripts to the ***~/.bashrc*** file 
 
@@ -142,7 +156,7 @@ If you want to use another folder, specify the `dataroot` parameter of the NuSce
 
 ### SECOND setup
 
-***Make use of the already existing environment nuscenes (we created this above)***
+**Make use of the already existing environment *nuscenes* (we created this above)**
 
 - Activates a conda environment named *nuscenes*
 
@@ -155,6 +169,16 @@ If you want to use another folder, specify the `dataroot` parameter of the NuSce
 - Install required packages from the second.pytorch/requirements.txt file:
 
 `$ pip install -r second.pytorch/requirements.txt`
+
+- Install CUDA from [HERE](https://docs.google.com/document/d/1s8pM0cNSrmc2Lvdy2eSEtBP2czZjJxrKkPF8773z_Xo/edit?usp=sharing)
+
+**You need to add following environment variable for numba.cuda to *~/.bashrc***
+
+```
+export NUMBA_CUDA_DRIVER=/usr/lib/x86_64-linux-gnu/libcuda.so
+export NUMBA_NVVM=/usr/local/cuda/nvvm/lib64/libnvvm.so
+export NUMBA_LIBDEVICE=/usr/local/cuda/nvvm/libdevice
+```
 
 `$ sudo apt-get install libboost-all-dev`
 

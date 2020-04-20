@@ -9,3 +9,4 @@ scipy
 Shapely
 tqdm
 descartes
+opencv-python
