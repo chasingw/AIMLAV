@@ -294,23 +294,70 @@ Open the actual Ubuntu VM make sure that you start the Jupyter server in the rig
 
 
 ### Trained a car object recognition model using the Nuscenes Dataset 
+
+#### Training
+
 - Using the SECOND devkit I trained an object recognition model using the Nuscenes dataset 
 
-- The scripts to this experiments are found and can be executed in this directory second.pytorch/second
+- Fist thing is to do is create a ground truth database for the TRAINING dataset, I used the Nuscenes dataset.
 
-`$ python ./pytorch/train.py train --config_path=./configs/nuscenes/pedestrian-test.fhd.config --model_dir=model_pedestrian --measure_time=True`
+```
+python create_data.py nuscenes_data_prep --data_path=$NUSCENES_TRAINVAL_DATASET_ROOT --version="v1.0-trainval" --max_sweeps=10 --dataset_name="NuScenesDataset"
+```
 
-- This command takes the parameters model configuration file as config_path and an output directory as model_dir. These configuration files can be found in the second.pytorch/second/configs. 
+- Secondly, create a gt_database for the TEST dataset. 
+```
+python create_data.py nuscenes_data_prep --data_path=$NUSCENES_TEST_DATASET_ROOT --version="v1.0-test" --max_sweeps=10 --dataset_name="NuScenesDataset"
+```
 
-- You can create/customise your own config files and link them to the scripts/command above.
+- Modify the configuration files accordingly by adding the full path to the three files *(dataset_dbinfos_train.pkl, dataset_infos_train.pkl, dataset_infos_val.pkl)*, they are in your ***data/sets/nuscenes*** directory
+**The config files are found in the *second.pytorch/second/configs/nuscenes* directory**
 
-### Performed inferences on this car object recognition model
-- Using the model trained above I then I run inferences on this models, experiments on this can be found in this notebook *second.pytorch/second/inference_v1.0.ipynb*
-  
-Trained a pointnet object recognition model using the pointnet subproject located *aml/pointnet*, I trained a point cloud object prediction model 
-Pointnet used a modelnet40 dataset located in the *aml/pointnet/data* directory to train the object recognition model we have.
+```
+train_input_reader: {
+  ...
+  database_sampler {
+    database_info_path: "/path/to/dataset_dbinfos_train.pkl"
+    ...
+  }
+  dataset: {
+    dataset_class_name: "DATASET_NAME"
+    kitti_info_path: "/path/to/dataset_infos_train.pkl"
+    kitti_root_path: "DATASET_ROOT"
+  }
+}
+...
+eval_input_reader: {
+  ...
+  dataset: {
+    dataset_class_name: "DATASET_NAME"
+    kitti_info_path: "/path/to/dataset_infos_val.pkl"
+    kitti_root_path: "DATASET_ROOT"
+  }
+}
+```
+
+- Execute the following script from the directory ***second.pytorch/second*** to train a model
+
+`$ python ./pytorch/train.py train --config_path=./configs/nuscenes/car-test.fhd.config --model_dir=model_car --measure_time=True`
+
+- This command takes the parameters ***model_dir* as the output directory of the model and *config_path* as the path to the configuration files**. These configuration files can be found in the **second.pytorch/second/configs** as mentioned above. 
+
+- You can customise your own config files and use them in the script above.
+
+#### Evaluation
+
+- Inprogress...
+
+#### Inference
+
+- Using the model trained above I then I run inferences on this models, experiments on this can be found in this notebook **second.pytorch/second/inference_v1.0.ipynb**
+
+- Inprogress...
 
 ### Adversarial Attacks
+
+
 - Ran adversarial attacks on modelnet40 point cloud dataset using the [**Adversarial-point-perturbations-on-3D-objects**](https://github.com/TangeniThePyGuru/Adversarial-point-perturbations-on-3D-objects) subproject. This project provides us with scripts to run adversarial attacks on point cloud objects, it is located here *aml/Adversarial-point-perturbations-on-3D-objects*, the scripts are located in the *src/* directory
 
 - The *src/* folder contains all the scripts that we need to run adversarial attacks and visualise the results of these attacks.  
