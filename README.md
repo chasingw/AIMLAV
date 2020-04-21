@@ -361,10 +361,8 @@ eval_input_reader: {
 - Ran adversarial attacks on modelnet40 point cloud dataset using the [**Adversarial-point-perturbations-on-3D-objects**](https://github.com/TangeniThePyGuru/Adversarial-point-perturbations-on-3D-objects) subproject. This project provides us with scripts to run adversarial attacks on point cloud objects, it is located here *aml/Adversarial-point-perturbations-on-3D-objects*, the scripts are located in the *src/* directory
 
 - The *src/* folder contains all the scripts that we need to run adversarial attacks and visualise the results of these attacks.  
-	
-	- This folder also provides us with scripts to visualize perturbed objects but I     
-           gave created a notebook *AML_notebook.ipynb* to help us visualise these
-           perturbed  objects. See examples in the notebook.
+
+- This folder also provides us with scripts to visualize perturbed objects but I gave created a notebook *AML_notebook.ipynb* to help us visualise these perturbed  objects. See examples in the notebook.
 
 
 ## TODO
