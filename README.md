@@ -199,12 +199,19 @@ export NUMBA_LIBDEVICE=/usr/local/cuda/nvvm/libdevice
 
 `$ pip install <something>.whl`
 
-- Add the following script to the bottom of ***~/.bashrc*** file, it allows SECOND to reference our ***nuscenes dataset***.
+- Add the following scripts to the bottom of ***~/.bashrc*** file, it allows SECOND to reference our ***nuscenes dataset***.
 ***Take note of the path below, make sure to use your own full path where you have installed the project, mine is under /home/$USER or simply ~/***
 
-`export NUSCENES_TRAINVAL_DATASET_ROOT="~/AIMLAV/nuscenes-devkit/python-sdk/data/sets/nuscenes"`
+```
+export NUSCENES_TRAINVAL_DATASET_ROOT="~/AIMLAV/nuscenes-devkit/python-sdk/data/sets/nuscenes"
+export NUSCENES_TEST_DATASET_ROOT="~/AIMLAV/nuscenes-devkit/python-sdk/data/sets/nuscenes_test"
+```
 
 `$ sudo nano ~/.bashrc`
+
+- Persist the changes made to the file 
+
+`$ source ~/.bashrc`
 
 
 ### Adversarial point perturbations on 3D objects setup
@@ -252,7 +259,7 @@ Open the actual Ubuntu VM make sure that you start the Jupyter server in the rig
 
 `$ cd /media/research/AV_DATA/Nuscenes/nuscenes-devkit/python-sdk`
 
-***This is were all the project development is taking place***
+***The directory above is were all the project development takes place***
 
 `$ conda activate`
 
@@ -279,7 +286,7 @@ Open the actual Ubuntu VM make sure that you start the Jupyter server in the rig
 - When prompted for a password use the password below:
 
 *Way$ToGo2022*
-	
+
 **Take note you do not need to make any configurations unless introducing something new**
 
 - The Jupyter Environment gives you the ability to open instances to your local terminal from the browser in case you need to execute any script from a terminal. 
