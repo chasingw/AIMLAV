@@ -95,14 +95,13 @@ Create project environment
 
 `$ source ~/.bashrc`
 
-
 ##### Create virtual environment
 
 `$ conda create -n nuscenes python=3.7`
 
 - Activate Environment
 
-`$ conda activate nuscnes`
+`$ conda activate nuscenes`
 
 - Install requirements
 
@@ -110,7 +109,7 @@ Create project environment
 
 - if you have issues installing opencv with the script above you can remove it from the requirements.txt file and install it via the conda package manager.
 
-`$ conda install opencv-python`
+`$ conda install opencv`
 
 #### Install project dependencies
 
@@ -122,6 +121,12 @@ export PYTHONPATH="${PYTHONPATH}:~/AIMLAV/nuscenes-devkit/python-sdk"
 ```
 > The first line creates a ***nucenes environement variable*** which us used to access the dataset.
 > The second line allows you to access python packages withing the ***python-sdk/*** directory, please take note of the path. This is where my project has been installed under the ***/media/$USER*** directory, so you should take note of where you install you project and change this accordingly.
+
+- From the *python-sdk/* dir, execute the following two scripts
+
+`$ mkdir -p data/sets/nuscenes`
+
+`$ mkdir -p data/sets/nuscenes_test`
 
 - Open the file with nano and paste the code above
 
@@ -143,6 +148,12 @@ data/sets/nuscenes
     sweeps	-	Sensor data for intermediate frames.
     maps	-	Folder for all map files: rasterized .png images and vectorized .json files.
     v1.0-*	-	JSON tables that include all the meta data and annotations. Each split (trainval, test, mini) is provided in a separate folder.
+    
+data/sets/nuscenes_test
+    samples	-	Sensor data for keyframes.
+    sweeps	-	Sensor data for intermediate frames.
+    maps	-	Folder for all map files: rasterized .png images and vectorized .json files.
+    v1.0-test	-	JSON tables that include all the meta data and annotations for the *test split dataset*.
 ```
 If you want to use another folder, specify the `dataroot` parameter of the NuScenes class (see tutorial).
 
@@ -152,6 +163,14 @@ If you want to use another folder, specify the `dataroot` parameter of the NuSce
 - Run test under the ***python-sdk/*** directory to confirm that there is not missing information.
 
 `$ python -m unittest`
+
+- You should an output similar to this for a successful test.
+
+```
+Ran 32 tests in 11.763s
+
+OK
+```
 
 ### SECOND setup
 
@@ -169,7 +188,7 @@ If you want to use another folder, specify the `dataroot` parameter of the NuSce
 
 `$ pip install -r second.pytorch/requirements.txt`
 
-- Install CUDA from [HERE](https://docs.google.com/document/d/1s8pM0cNSrmc2Lvdy2eSEtBP2czZjJxrKkPF8773z_Xo/edit?usp=sharing)
+- Install CUDA and cuDNN from [HERE](https://docs.google.com/document/d/1s8pM0cNSrmc2Lvdy2eSEtBP2czZjJxrKkPF8773z_Xo/edit?usp=sharing)
 
 **You need to add following environment variable for numba.cuda to *~/.bashrc***
 
@@ -212,6 +231,8 @@ export NUSCENES_TEST_DATASET_ROOT="~/AIMLAV/nuscenes-devkit/python-sdk/data/sets
 - Persist the changes made to the file 
 
 `$ source ~/.bashrc`
+
+- Now you can open the ***Dev.ipynb notebook*** to start development work 
 
 
 ### Adversarial point perturbations on 3D objects setup
